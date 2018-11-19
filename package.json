@@ -1,0 +1,44 @@
+{
+	"name": "poolnoodle",
+	"version": "1.0.0",
+	"description": "A simple HTTP web server with managed child worker pools.",
+	"author": "Joseph Huckaby <jhuckaby@gmail.com>",
+	"homepage": "https://github.com/jhuckaby/PoolNoodle",
+	"license": "MIT",
+	"main": "lib/main.js",
+	"bin": {
+		"poolnoodle": "bin/control.sh"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jhuckaby/PoolNoodle"
+	},
+	"bugs": {
+		"url": "https://github.com/jhuckaby/PoolNoodle/issues"
+	},
+	"keywords": [
+		"web",
+		"server",
+		"pool",
+		"daemon",
+		"http",
+		"https"
+	],
+	"dependencies": {
+		"pixl-class": "^1.0.0",
+		"pixl-tools": "^1.0.0",
+		"pixl-logger": "^1.0.0",
+		"pixl-server": "^1.0.0",
+		"pixl-server-web": "^1.0.0",
+		"pixl-server-pool": "^1.0.0",
+		"pixl-boot": "^1.0.0",
+		"pixl-acl": "^1.0.0"
+	},
+	"devDependencies": {
+		"node-notifier": "5.3.0"
+	},
+	"scripts": {
+		"boot": "pixl-boot install --script bin/control.sh",
+		"unboot": "pixl-boot uninstall"
+	}
+}

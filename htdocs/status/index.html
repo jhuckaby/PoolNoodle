@@ -1,0 +1,471 @@
+<!DOCTYPE HTML>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>PoolNoodle Status</title>
+		<link rel="stylesheet" href="style.css">
+		<script>
+			var $ = function(query) { return document.querySelector(query); };
+			var $$ = function(query) { return Array.from(document.querySelectorAll(query)); };
+			
+			var app = {
+				refreshTimer: null,
+				
+				run: function() {
+					// set checkbox based on user pref
+					if ((localStorage.auto_refresh === undefined) || (localStorage.auto_refresh == 1)) {
+						$('#fe_auto_refresh').checked = true;
+						this.setAutoRefresh(true);
+					}
+					else {
+						this.refresh();
+					}
+				},
+				
+				setAutoRefresh: function(checked) {
+					// set user pref, start/stop timer
+					localStorage.auto_refresh = checked ? 1 : 0;
+					if (checked) {
+						this.refreshTimer = setInterval( this.refresh.bind(this), 10 * 1000 );
+						this.refresh();
+					}
+					else {
+						clearTimeout( this.refreshTimer );
+					}
+				},
+				
+				refresh: function() {
+					// fetch data from server and render it
+					fetch('/status/api')
+						.then( function(res) {
+							if (!res.ok) throw new Error("HTTP " + res.status + " " + res.statusText);
+							return res.json();
+						} )
+						.then(function(json) {
+							app.handleResponse(json);
+						} )
+						.catch( function(err) {
+							// API error, probably ACL
+							var html = '';
+							html += '<h1>API Error: ' + (err.message || err) + '</h1>';
+							html += '<p style="margin-top:15px;">Is the PoolNoodle server running, and listening on the correct port?  Also, note that the status page only works if your IP address is part of the ACL (Access Control List).  See the docs for details.</p>';
+							$('#page_Home').innerHTML = html;
+						} );
+				},
+				
+				handleResponse: function(json) {
+					// render the datas!
+					var html = '';
+					var now = hires_time_now();
+					
+					var total_cpu_pct = json.cpu.pct || 0;
+					var total_mem_bytes = json.mem.rss || 0;
+					
+					for (var idx = 0, len = json.workers.length; idx < len; idx++) {
+						var worker = json.workers[idx];
+						total_cpu_pct += worker.stats.cpu.pct || 0;
+						total_mem_bytes += worker.stats.mem.rss || 0;
+					}
+					
+					html += '<fieldset><legend>Server Status</legend>';
+						
+						html += '<div style="float:left; width:25%;">';
+							html += '<div class="info_label">PoolNoodle Version</div>';
+							html += '<div class="info_value">v' + json.version + '</div>';
+							
+							html += '<div class="info_label">Node.js Version</div>';
+							html += '<div class="info_value">' + json.system.node + '</div>';
+							
+							html += '<div class="info_label">Server Hostname</div>';
+							html += '<div class="info_value">' + json.web.server.hostname + '</div>';
+							
+							html += '<div class="info_label">Listening Ports</div>';
+							html += '<div class="info_value">' + json.web.server.ports.join(', ') + '</div>';
+							
+							html += '<div class="info_label">LAN IP Address</div>';
+							html += '<div class="info_value">' + json.web.server.ip + '</div>';
+							
+							html += '<div class="info_label">Main Process ID</div>';
+							html += '<div class="info_value">' + json.process.pid + '</div>';
+						html += '</div>';
+						
+						html += '<div style="float:left; width:25%;">';
+							html += '<div class="info_label">Total System Memory</div>';
+							html += '<div class="info_value">' + get_text_from_bytes(json.system.totalMemoryBytes) + '</div>';
+							
+							html += '<div class="info_label">Number of CPUs</div>';
+							html += '<div class="info_value">' + json.system.cores + '</div>';
+							
+							html += '<div class="info_label">Number of Pools</div>';
+							html += '<div class="info_value">' + Object.keys(json.pools).length + '</div>';
+							
+							html += '<div class="info_label">Number of Apps</div>';
+							html += '<div class="info_value">' + Object.keys(json.apps).length + '</div>';
+							
+							html += '<div class="info_label">Active Workers</div>';
+							html += '<div class="info_value">' + json.workers.length + '</div>';
+							
+							html += '<div class="info_label">Open Sockets</div>';
+							html += '<div class="info_value">' + Object.keys(json.web.sockets).length + '</div>';
+						html += '</div>';
+						
+						html += '<div style="float:left; width:25%;">';
+							html += '<div class="info_label">Platform / Arch</div>';
+							html += '<div class="info_value">' + ucfirst(json.system.platform) + ' ' + json.system.arch + '</div>';
+							
+							html += '<div class="info_label">Load Averages</div>';
+							html += '<div class="info_value">' + json.system.load.map( short_float ).join(', ') + '</div>';
+							
+							html += '<div class="info_label">Total CPU Usage</div>';
+							html += '<div class="info_value">' + short_float(total_cpu_pct) + '%</div>';
+							
+							html += '<div class="info_label">Total Memory Usage</div>';
+							html += '<div class="info_value">' + get_text_from_bytes(total_mem_bytes) + '</div>';
+							
+							html += '<div class="info_label">Process Uptime</div>';
+							html += '<div class="info_value">' + get_text_from_seconds(json.web.server.uptime_sec, false, true) + '</div>';
+							
+							html += '<div class="info_label">Server Uptime</div>';
+							html += '<div class="info_value">' + get_text_from_seconds(json.system.uptime, false, true) + '</div>';
+						html += '</div>';
+						
+						html += '<div style="float:left; width:25%;">';
+							html += '<div class="info_label">Total Requests Served</div>';
+							html += '<div class="info_value">' + commify(json.totals.requests) + '</div>';
+							
+							html += '<div class="info_label">Total Sockets Opened</div>';
+							html += '<div class="info_value">' + commify(json.totals.sockets) + '</div>';
+							
+							html += '<div class="info_label">Current Bytes In/Sec</div>';
+							html += '<div class="info_value">' + get_text_from_bytes( json.web.stats.bytes_in || 0 ) + '</div>';
+							
+							html += '<div class="info_label">Current Bytes Out/Sec</div>';
+							html += '<div class="info_value">' + get_text_from_bytes( json.web.stats.bytes_out || 0 ) + '</div>';
+							
+							html += '<div class="info_label">Current Requests/Sec</div>';
+							html += '<div class="info_value">' + commify( json.web.stats.num_requests || 0 ) + '</div>';
+							
+							html += '<div class="info_label">Average Request Time</div>';
+							html += '<div class="info_value">' + short_float( (json.totals.elapsed_ms || 0) / (json.totals.requests || 1) ) + ' ms</div>';
+						html += '</div>';
+						
+						html += '<div style="clear:both"></div>';
+					html += '</fieldset>';
+					
+					// table of workers
+					var cols = ['Pool', 'PID', 'State', 'Memory', 'CPU', 'Uptime', 'Reqs Served', 'Avg Time', 'Active Reqs'];
+					html += '<div class="subtitle" style="margin-top:15px;">Active Workers</div>';
+					html += getBasicTable(json.workers, cols, 'worker', function(row) {
+						return [
+							row.pool_id,
+							row.pid,
+							ucfirst( row.state ),
+							get_text_from_bytes( row.stats.mem.rss || 0 ),
+							short_float(row.stats.cpu.pct || 0) + '%',
+							get_text_from_seconds(now - row.stats.start_time, true, true),
+							commify( row.stats.num_requests || 0 ),
+							short_float( (row.stats.total_elapsed_ms || 0) / (row.stats.num_requests || 1) ) + ' ms',
+							commify( row.num_active_requests || 0 )
+						];
+					});
+					
+					// table of sockets
+					var sockets = [];
+					for (var socket_id in json.web.sockets) {
+						var socket = json.web.sockets[socket_id];
+						socket.id = socket_id;
+						sockets.push( socket );
+					}
+					
+					cols = ['ID', 'State', 'IP Address', 'Protocol', 'Reqs Served', 'Data Received', 'Data Sent', 'Uptime'];
+					html += '<div class="subtitle" style="margin-top:15px;">Open Sockets</div>';
+					html += getBasicTable(sockets, cols, 'socket', function(row) {
+						var ip = row.ip;
+						if (ip.match(/\:(\d+\.\d+\.\d+\.\d+)/)) ip = RegExp.$1; // extract IPv4 from IPv6 wrapper
+						return [
+							row.id,
+							ucfirst( row.state ),
+							ip,
+							row.proto.toUpperCase(),
+							commify( row.num_requests ),
+							get_text_from_bytes( row.bytes_in || 0 ),
+							get_text_from_bytes( row.bytes_out || 0 ),
+							get_text_from_seconds(row.uptime_ms / 1000, true, true)
+						];
+					});
+					
+					// table of recent requests
+					cols = ['App ID', 'IP Address', 'URL', 'Response', 'Data Received', 'Data Sent', 'Elapsed Time'];
+					html += '<div class="subtitle" style="margin-top:15px;">Recent Requests</div>';
+					html += getBasicTable(json.web.recent, cols, 'request', function(row) {
+						var perf = row.perf || { perf: {}, counters: {} };
+						var url = row.proto + '://' + row.host + row.uri;
+						
+						return [
+							perf.app_id || 'n/a',
+							row.ips[ row.ips.length - 1 ],
+							'<div class="url_disp">' + expando_text(url, 80, 'More') + '</div>',
+							row.code + ' ' + row.status,
+							get_text_from_bytes( perf.counters.bytes_in || 0 ),
+							get_text_from_bytes( perf.counters.bytes_out || 0 ),
+							perf.perf.total + ' ms'
+						];
+					});
+					
+					$('#page_Home').innerHTML = html;
+				}
+				
+			}; // app
+			
+			function ucfirst(text) {
+				// capitalize first character only, lower-case rest
+				return text.substring(0, 1).toUpperCase() + text.substring(1, text.length).toLowerCase();
+			};
+			
+			function get_text_from_bytes(bytes, precision) {
+				// convert raw bytes to english-readable format
+				// set precision to 1 for ints, 10 for 1 decimal point (default), 100 for 2, etc.
+				bytes = Math.floor(bytes);
+				if (!precision) precision = 10;
+				
+				if (bytes >= 1024) {
+					bytes = Math.floor( (bytes / 1024) * precision ) / precision;
+					if (bytes >= 1024) {
+						bytes = Math.floor( (bytes / 1024) * precision ) / precision;
+						if (bytes >= 1024) {
+							bytes = Math.floor( (bytes / 1024) * precision ) / precision;
+							if (bytes >= 1024) {
+								bytes = Math.floor( (bytes / 1024) * precision ) / precision;
+								return bytes + ' TB';
+							} 
+							else return bytes + ' GB';
+						} 
+						else return bytes + ' MB';
+					}
+					else return bytes + ' K';
+				}
+				else return bytes + pluralize(' byte', bytes);
+			};
+			
+			function commify(number) {
+				// add commas to integer, like 1,234,567
+				if (!number) number = 0;
+
+				number = '' + number;
+				if (number.length > 3) {
+					var mod = number.length % 3;
+					var output = (mod > 0 ? (number.substring(0,mod)) : '');
+					for (i=0 ; i < Math.floor(number.length / 3); i++) {
+						if ((mod == 0) && (i == 0))
+							output += number.substring(mod+ 3 * i, mod + 3 * i + 3);
+						else
+							output+= ',' + number.substring(mod + 3 * i, mod + 3 * i + 3);
+					}
+					return (output);
+				}
+				else return number;
+			};
+
+			function short_float(value, places) {
+				// Shorten floating-point decimal to N places max
+				if (!places) places = 2;
+				var mult = Math.pow(10, places);
+				return( Math.floor(parseFloat(value || 0) * mult) / mult );
+			};
+
+			function pct(count, max, floor) {
+				// Return formatted percentage given a number along a sliding scale from 0 to 'max'
+				var pct = (count * 100) / (max || 1);
+				if (!pct.toString().match(/^\d+(\.\d+)?$/)) { pct = 0; }
+				return '' + (floor ? Math.floor(pct) : short_float(pct)) + '%';
+			};
+
+			function get_text_from_seconds(sec, abbrev, no_secondary) {
+				// convert raw seconds to human-readable relative time
+				var neg = '';
+				sec = parseInt(sec, 10);
+				if (sec<0) { sec =- sec; neg = '-'; }
+				
+				var p_text = abbrev ? "sec" : "second";
+				var p_amt = sec;
+				var s_text = "";
+				var s_amt = 0;
+				
+				if (sec > 59) {
+					var min = parseInt(sec / 60, 10);
+					sec = sec % 60; 
+					s_text = abbrev ? "sec" : "second"; 
+					s_amt = sec; 
+					p_text = abbrev ? "min" : "minute"; 
+					p_amt = min;
+					
+					if (min > 59) {
+						var hour = parseInt(min / 60, 10);
+						min = min % 60; 
+						s_text = abbrev ? "min" : "minute"; 
+						s_amt = min; 
+						p_text = abbrev ? "hr" : "hour"; 
+						p_amt = hour;
+						
+						if (hour > 23) {
+							var day = parseInt(hour / 24, 10);
+							hour = hour % 24; 
+							s_text = abbrev ? "hr" : "hour"; 
+							s_amt = hour; 
+							p_text = "day"; 
+							p_amt = day;
+							
+							if (day > 29) {
+								var month = parseInt(day / 30, 10);
+								day = day % 30; 
+								s_text = "day"; 
+								s_amt = day; 
+								p_text = abbrev ? "mon" : "month"; 
+								p_amt = month;
+							} // day>29
+						} // hour>23
+					} // min>59
+				} // sec>59
+				
+				var text = p_amt + "&nbsp;" + p_text;
+				if ((p_amt != 1) && !abbrev) text += "s";
+				if (s_amt && !no_secondary) {
+					text += ", " + s_amt + "&nbsp;" + s_text;
+					if ((s_amt != 1) && !abbrev) text += "s";
+				}
+				
+				return(neg + text);
+			};
+			
+			function hires_time_now() {
+				// return the Epoch seconds for like right now
+				var now = new Date();
+				return ( now.getTime() / 1000 );
+			};
+			
+			function pluralize(word, num) {
+				// Pluralize a word using English language rules.
+				if (num != 1) {
+					if (word.match(/[^e]y$/)) return word.replace(/y$/, '') + 'ies';
+					else return word + 's';
+				}
+				else return word;
+			};
+			
+			function expando_click(elem) {
+				// click on expando link
+				// jQuery version: $(this).parent().hide().next().show()
+				elem.parentNode.style.display = 'none';
+				elem.parentNode.nextSibling.style.display = '';
+			};
+			
+			function expando_text(text, max, link) {
+				// if text is longer than max chars, chop with ellipsis and include link to show all
+				if (!link) link = 'More';
+				if (text.length <= max) return text;
+				
+				var before = text.substring(0, max);
+				var after = text.substring(max);
+				
+				return before + 
+					'<span>... <a href="javascript:void(0)" onMouseUp="expando_click(this)">'+link+'</a></span>' + 
+					'<span style="display:none">' + after + '</span>';
+			};
+			
+			function getBasicTable(rows, cols, data_type, callback) {
+				// get html for sorted table (fake pagination, for looks only)
+				var html = '';
+				
+				// pagination
+				html += '<div class="pagination">';
+				html += '<table cellspacing="0" cellpadding="0" border="0" width="100%"><tr>';
+				
+				html += '<td align="left" width="33%">';
+				if (cols.headerLeft) html += cols.headerLeft;
+				else html += commify(rows.length) + ' ' + pluralize(data_type, rows.length) + '';
+				html += '</td>';
+				
+				html += '<td align="center" width="34%">';
+					html += cols.headerCenter || '&nbsp;';
+				html += '</td>';
+				
+				html += '<td align="right" width="33%">';
+					html += cols.headerRight || 'Page 1 of 1';
+				html += '</td>';
+				
+				html += '</tr></table>';
+				html += '</div>';
+				
+				html += '<div style="margin-top:5px;">';
+				html += '<table class="data_table" width="100%">';
+				html += '<tr><th style="white-space:nowrap;">' + cols.join('</th><th style="white-space:nowrap;">') + '</th></tr>';
+				
+				for (var idx = 0, len = rows.length; idx < len; idx++) {
+					var row = rows[idx];
+					var tds = callback(row, idx);
+					if (tds.insertAbove) html += tds.insertAbove;
+					html += '<tr' + (tds.className ? (' class="'+tds.className+'"') : '') + '>';
+					html += '<td>' + tds.join('</td><td>') + '</td>';
+					html += '</tr>';
+				} // foreach row
+				
+				if (!rows.length) {
+					html += '<tr><td colspan="'+cols.length+'" align="center" style="padding-top:10px; padding-bottom:10px; font-weight:bold;">';
+					html += 'No '+pluralize(data_type)+' found.';
+					html += '</td></tr>';
+				}
+				
+				html += '</table>';
+				html += '</div>';
+				
+				return html;
+			};
+		</script>
+	</head>
+	<body>
+		
+		<!-- Logo and title -->
+		<div id="d_header">
+			<div class="container">
+				<div id="d_header_logo" class="left"></div>
+				<div id="d_header_title" class="left"></div>
+				<div id="d_header_user_container" class="right">
+					<div class="header_auto_refresh_container">
+						<input type="checkbox" id="fe_auto_refresh" value="1" onChange="app.setAutoRefresh(this.checked)"/><label for="fe_auto_refresh">Auto-Refresh</label>
+					</div>
+				</div>
+				<div class="clear"></div>
+			</div>
+		</div>
+		
+		<!-- Main page container -->
+		<div class="container">
+			
+			<!-- Main Content Area -->
+			<div class="tab_bar" style="display:none">
+				<div id="tab_Home" class="tab active"><span class="content">Home</span></div>
+				<div class="clear"></div>
+			</div>
+			
+			<!-- Actual page contents here -->
+			<div id="main" class="main">
+				<div id="page_Home">
+					
+				</div>
+			</div>
+			
+			<!-- Footer -->
+			<div id="d_footer">
+				<div class="left">
+					PoolNoodle &copy; 2018 PixlCore.com. Released under the MIT License.
+				</div>
+				<div id="d_footer_version" class="right">
+					
+				</div>
+				<div class="clear"></div>
+			</div>
+			
+		</div>
+	</body>
+	<script> app.run(); </script>
+</html>

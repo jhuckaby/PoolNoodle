@@ -1,0 +1,73 @@
+{
+	"log_dir": "logs",
+	"log_filename": "Server.log",
+	"worker_log_filename": "Worker.log",
+	"log_crashes": true,
+	"pid_file": "logs/pid.txt",
+	"debug_level": 9,
+	"worker_debug_level": 9,
+	"check_config_freq_ms": 1000,
+	
+	"PoolNoodle": {
+		"stats_uri_match": "^/status/api",
+		"watcher_enabled": true,
+		"watcher_cooldown_ms": 500,
+		
+		"pools": {
+			"default": {
+				"min_children": 2,
+				"max_children": 16,
+				"max_concurrent_requests": 0,
+				"max_requests_per_child": 0,
+				"max_concurrent_launches": 1,
+				"max_concurrent_maint": 1,
+				"child_headroom_pct": 0,
+				"child_busy_factor": 1,
+				"startup_timeout_sec": 10,
+				"shutdown_timeout_sec": 10,
+				"request_timeout_sec": 0,
+				"maint_timeout_sec": 0,
+				"auto_maint": false
+			}
+		},
+		
+		"plugins": [],
+		"worker_plugins": []
+	},
+	
+	"WebServer": {
+		"http_port": 3020,
+		"http_htdocs_dir": "htdocs",
+		"http_server_signature": "PoolNoodle 1.0",
+		"http_gzip_text": true,
+		"http_timeout": 30,
+		"http_keep_alives": "default",
+		"http_static_index": "index.html",
+		"http_static_ttl": 86400,
+		"http_clean_headers": true,
+		"http_log_requests": true,
+		"http_regex_log": ".+",
+		"http_recent_requests": 100,
+		"http_max_connections": 255,
+		"http_default_acl": ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "::1/128", "fd00::/8"],
+		
+		"https": false,
+		"https_port": 3021,
+		"https_cert_file": "conf/ssl.crt",
+		"https_key_file": "conf/ssl.key",
+		"https_force": 0,
+		"https_timeout": 30,
+		"https_header_detect": {
+			"Front-End-Https": "^on$",
+			"X-Url-Scheme": "^https$",
+			"X-Forwarded-Protocol": "^https$",
+			"X-Forwarded-Proto": "^https$",
+			"X-Forwarded-Ssl": "^on$"
+		}
+	},
+	
+	"PoolManager": {
+		"uncatch": true
+	}
+	
+}

@@ -1,0 +1,7 @@
+.gitignore
+node_modules/
+conf/config.json
+conf/apps/
+test/test.log
+logs/
+work/
