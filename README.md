@@ -554,6 +554,10 @@ module.exports = {
 		callback(false);
 	},
 	
+	reload: function(callback) {
+		callback();
+	}
+	
 	shutdown: function(callback) {
 		callback();
 	}
@@ -570,6 +574,15 @@ callback( "200 OK", { "X-Foo": "Plugin" }, "Request was intercepted by Plugin!" 
 ```
 
 It is important to note that parent Plugins filter requests so early that an application route has not yet been decided.  The request might not even be routed to an application (i.e. it may be a static file).  So keep this in mind when writing these types of Plugins.
+
+Here are descriptions of the Plugin methods you can define, and what they do:
+
+| Method | Description |
+|--------|-------------|
+| `startup()` | Called on initial server startup.  If defined, make sure you fire the `callback` to indicate completion.  Pass an `Error` object upon failure (which results in the entire PoolNoodle service shutting down). |
+| `handler()` | Called for each request, very early in the request cycle.  Use this to filter requests before applications get them.  Fire the `callback` to passthrough or intercept request (see above). |
+| `reload()` | Called when applications are being hot-reloaded. Useful if you implement application-specific features and may need to reinitialize them (new apps may have been added, etc.). |
+| `shutdown()` | Called when the PoolNoodle service is shutting down.  Fire the `callback` when your Plugin is shut down and ready for the main process to exit. |
 
 Your Plugin's `exports` object is augmented with the following properties and functions on startup:
 
@@ -600,7 +613,7 @@ To register a Plugin in the worker process to filter requests, specify the path 
 ]
 ```
 
-Your worker Plugin code should be a Node.js script that exports the following functions (all are optional):
+Your Worker Plugin code should be a Node.js script that exports the following functions (all are optional):
 
 ```js
 module.exports = {
@@ -633,7 +646,17 @@ Here we are filtering requests and intercepting those destined for the `testapp`
 
 Sending responses is different in the worker than in the parent.  For more information about sending responses and the `args` object, see the [Handling Requests](https://github.com/jhuckaby/pixl-server-pool#handling-requests) section in the [pixl-server-pool](https://github.com/jhuckaby/pixl-server-pool) module docs.
 
-Your worker Plugin's `exports` object is augmented with the following properties and functions on startup:
+Here are descriptions of the Worker Plugin methods you can define, and what they do:
+
+| Method | Description |
+|--------|-------------|
+| `startup()` | Called on each worker child startup.  If defined, make sure you fire the `callback` to indicate completion.  If you pass an `Error` object to the callback, the child will abort startup and die. |
+| `handler()` | Called for each request, before the application handler is called.  Use this to filter requests.  Fire the `callback` to passthrough or intercept request (see above). |
+| `shutdown()` | Called when the worker is shutting down (either for a hot reload or full PoolNoodle shutdown).  Fire the `callback` when your Plugin is ready for the worker to exit. |
+
+You may notice that Worker Plugins do not implement a `reload()` method.  This is because when applications are reloaded, all worker processes are shut down, and new ones are spawned to take their place.
+
+Your Worker Plugin's `exports` object is augmented with the following properties and functions on startup:
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -647,7 +670,7 @@ Your worker Plugin's `exports` object is augmented with the following properties
 | `logError()` | Function | A convenience method provided to allow for easy error logging (see [Logging](#logging). |
 | `logTransaction()` | Function | A convenience method provided to allow for easy transaction logging (see [Logging](#logging). |
 
-Calling `logDebug()`, `logError()` or `logTransaction()` in worker Plugins causes an entry to be appended to the `Worker.log` file.  The `component` column will be set to the `__name` property, which defaults to your script filename.
+Calling `logDebug()`, `logError()` or `logTransaction()` in Worker Plugins causes an entry to be appended to the `Worker.log` file.  The `component` column will be set to the `__name` property, which defaults to your script filename.
 
 ## Command-Line Usage
 
