@@ -146,7 +146,7 @@ Here is an example configuration:
 		"http_regex_log": ".+",
 		"http_recent_requests": 100,
 		"http_max_connections": 255,
-		"http_default_acl": ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "::1/128", "fd00::/8"],
+		"http_default_acl": ["::1/128", "127.0.0.1/32", "169.254.0.0/16", "fe80::/10", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"],
 		
 		"https": false,
 		"https_port": 3021,
@@ -522,10 +522,10 @@ Some of your applications may require IP address based access restriction, known
 Alternatively, if your application requires a custom set of IP address ranges to whitelist, you can specify your own custom ACL in the `acl` property, by setting it to an array of individual addresses or [CIDR blocks](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing):
 
 ```js
-"acl": ["127.0.0.1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "::1/128", "fd00::/8"]
+"acl": ["::1/128", "127.0.0.1/32", "169.254.0.0/16", "fe80::/10", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"]
 ```
 
-Both IPv4 and IPv4 addresses and CIDR ranges are supported.
+Both IPv4 and IPv4 addresses and CIDR ranges are supported.  The example above includes all the [IPv4](https://en.wikipedia.org/wiki/Private_network#Private_IPv4_addresses) and [IPv6](https://en.wikipedia.org/wiki/Private_network#Private_IPv6_addresses) private address ranges, the [localhost loopback](https://en.wikipedia.org/wiki/Localhost#Loopback) addresses (both IPv4 and IPv6 versions), and the [link-local addresses](https://en.wikipedia.org/wiki/Link-local_address) (both IPv4 and IPv6 versions).
 
 ## Plugins
 
