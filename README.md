@@ -251,6 +251,7 @@ All the pool parameters here are passed directly to [pixl-server-pool](https://g
 | `maint_method` | `'requests'` | When `auto_maint` is enabled this prop can be set to either `'requests'` or `'time'` (strings). |
 | `maint_requests` | `1000` | When `maint_method` is set to `requests` this specifies the number of worker requests to count between maintenance sweeps. |
 | `maint_time_sec` | `0` | When `maint_method` is set to `time` this specifies the number of seconds between maintenance sweeps (tracked per worker). |
+| `exec_opts` | n/a | Optionally set the `uid` and/or `gid` of your child workers.  See [Child Spawn Options](https://github.com/jhuckaby/pixl-server-pool#child-spawn-options) for details on this. |
 
 You can add as many additional pools as you like to the main configuration.  Just give them a unique ID (property key) like this:
 
@@ -326,7 +327,7 @@ Here are brief descriptions of the properties in the file.  More details are in 
 | `pool` | String | This specifies which pool of workers to use for application requests. |
 | `routes` | Object | Route one or more URI patters to handler scripts.  See [Routes](#routes) below. |
 | `static` | Object | Route one or more URI patters to static files on disk.  See [Static Hosting](#static-hosting) below. |
-| `acl` | Mixed | Optionally set an IP-based ACL ([Access Control List](#access-control-list)) for the application (`false` allows all). |
+| `acl` | Mixed | Optionally set an IP-based ACL ([Access Control Lists](#access-control-lists)) for the application (`false` allows all). |
 | `headers` | Object | Optionally limit your application to requests that match certain headers.  See [Virtual Hosts](#virtual-hosts) below. |
 | `pools` | Object | Optionally define additional custom worker pools.  See [Custom Pools](#custom-pools) below. |
 
@@ -475,6 +476,36 @@ Note that you don't necessarily need to specify fully-qualified filesystem paths
 ```
 
 See the [pixl-server-web](https://github.com/jhuckaby/pixl-server-web#configuration) documentation for details on configuring static hosting options, such as cache TTL (`Cache-Control` response header), default index document (`index.html`) and others.
+
+Here is another potential use case for static hosting.  If your app includes any *client-side* dependencies like [jQuery](https://www.npmjs.com/package/jquery) or [Font Awesome](https://www.npmjs.com/package/font-awesome), you can use static hosting to setup routes to these files.  For example, let's say we include the following in our app's dependencies:
+
+```js
+"dependencies": {
+	"jquery": "3.3.1",
+	"font-awesome": "4.7.0"
+}
+```
+
+The problem is, these libraries will be installed as Node modules, i.e. in your app's `node_modules/` folder, so they are not really "client-side accessible" by default.  You could create symlinks on install, but an easier way is to simply define static routes for them, like this:
+
+```js
+"static": {
+	"^/testapp/lib/jquery": "node_modules/jquery/dist",
+	"^/testapp/lib/font-awesome": "node_modules/font-awesome",
+	"^/testapp": "htdocs"
+}
+```
+
+**Important Note:** If you specify multiple static routes like this, make sure you list the more specific routes first, followed by the more generic catch-all route at the end.  In the above example we need the jQuery/FontAwesome routes to be matched *before* the generic `htdocs` route is evaluated (otherwise it would capture all static requests).
+
+Then your client-side HTML code could import the libraries like this:
+
+```html
+<link rel="stylesheet" href="/testapp/lib/font-awesome/font-awesome.min.css">
+<script src="/testapp/lib/jquery/jquery.min.js"></script>
+```
+
+Make sure you take a peek inside the NPM modules you download to see where they hide their client-side distribution files, e.g. pre-built files ready for HTML inclusion.
 
 ### Virtual Hosts
 
@@ -696,6 +727,7 @@ Here is the full command list:
 | `start` | Start PoolNoodle as a background service. |
 | `stop` | Stop PoolNoodle and wait until it actually exits. |
 | `restart` | Calls stop, then start (hard restart). |
+| `reload` | Requests a reload of all apps (rolling child restart). |
 | `status` | Checks whether PoolNoodle is currently running. |
 | `debug` | Start the service in debug mode (see [Debugging](#debugging) below). |
 | `config` | Edit the main config file in your editor of choice (via `EDITOR` environment variable). |

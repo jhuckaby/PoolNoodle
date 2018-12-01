@@ -16,7 +16,7 @@
 #
 #
 # |||||||||||||||||||| START CONFIGURATION SECTION  ||||||||||||||||||||
-# --------------------                              --------------------
+# --------------------							  --------------------
 # 
 # the name of your binary
 NAME="PoolNoodle"
@@ -26,7 +26,7 @@ SCRIPT=`perl -MCwd -le 'print Cwd::abs_path(shift)' "$0"`
 
 if [ "x$SCRIPT" = "x" ] ; then 
 	echo "ERROR: Cannot locate script: $0"
-    exit 1;
+	exit 1;
 fi
 
 # home directory
@@ -40,74 +40,86 @@ BINARY="node $HOMEDIR/lib/main.js"
 # the path to your PID file
 PIDFILE=$HOMEDIR/logs/pid.txt
 
-# --------------------                              --------------------
+# --------------------							  --------------------
 # ||||||||||||||||||||   END CONFIGURATION SECTION  ||||||||||||||||||||
 
 ERROR=0
 ARGV="$@"
 if [ "x$ARGV" = "x" ] ; then 
-    ARGS="help"
+	ARGS="help"
 fi
 
 for ARG in $@ $ARGS
 do
-    # check for pidfile
-    if [ -f $PIDFILE ] ; then
+	# check for pidfile
+	if [ -f $PIDFILE ] ; then
 		PID=`cat $PIDFILE`
 	if [ "x$PID" != "x" ] && kill -0 $PID 2>/dev/null ; then
-	    STATUS="$NAME running (pid $PID)"
-	    RUNNING=1
+		STATUS="$NAME running (pid $PID)"
+		RUNNING=1
 	else
-	    STATUS="$NAME not running (pid $PID?)"
-	    RUNNING=0
+		STATUS="$NAME not running (pid $PID?)"
+		RUNNING=0
 	fi
-    else
+	else
 		STATUS="$NAME not running (no pid file)"
 		RUNNING=0
-    fi
+	fi
 
-    case $ARG in
-    start)
+	case $ARG in
+	start)
 		if [ $RUNNING -eq 1 ]; then
-		    echo "$ARG: $NAME already running (pid $PID)"
-		    continue
+			echo "$ARG: $NAME already running (pid $PID)"
+			continue
 		fi
 		echo "$0 $ARG: Starting up $NAME..."
 		if $BINARY ; then
-		    echo "$0 $ARG: $NAME started"
+			echo "$0 $ARG: $NAME started"
 		else
-		    echo "$0 $ARG: $NAME could not be started"
-		    ERROR=3
+			echo "$0 $ARG: $NAME could not be started"
+			ERROR=3
 		fi
 	;;
-    stop)
+	stop)
 		if [ $RUNNING -eq 0 ]; then
-		    echo "$ARG: $STATUS"
-		    continue
+			echo "$ARG: $STATUS"
+			continue
 		fi
 		if kill $PID ; then
-	            while [ "x$PID" != "x" ] && kill -0 $PID 2>/dev/null ; do
-	                sleep 1;
-	            done
-		    echo "$0 $ARG: $NAME stopped"
+				while [ "x$PID" != "x" ] && kill -0 $PID 2>/dev/null ; do
+					sleep 1;
+				done
+			echo "$0 $ARG: $NAME stopped"
 		else
-		    echo "$0 $ARG: $NAME could not be stopped"
-		    ERROR=4
+			echo "$0 $ARG: $NAME could not be stopped"
+			ERROR=4
 		fi
 	;;
-    restart)
-        $0 stop start
+	restart)
+		$0 stop start
 	;;
-    cycle)
-        $0 stop start
+	cycle)
+		$0 stop start
 	;;
 	status)
 		echo "$ARG: $STATUS"
 	;;
+	reload)
+		if [ $RUNNING -eq 0 ]; then
+			echo "$ARG: $STATUS"
+			continue
+		fi
+		if kill -HUP $PID ; then
+			echo "$0 $ARG: $NAME is reloading"
+		else
+			echo "$0 $ARG: $NAME could not be reloaded"
+			ERROR=4
+		fi
+	;;
 	debug)
 		if [ $RUNNING -eq 1 ]; then
-		    echo "$ARG: $NAME already running (pid $PID)"
-		    continue
+			echo "$ARG: $NAME already running (pid $PID)"
+			continue
 		fi
 		echo "$0 $ARG: Starting $NAME in debug mode..."
 		echo ""
@@ -132,27 +144,27 @@ do
 		node $HOMEDIR/bin/install.js $2 || exit 1
 		exit
 	;;
-    *)
+	*)
 	echo "usage: $0 (start|stop|restart|status|help)"
 	cat <<EOF
 
-start      - Starts $NAME as a daemon.
-stop       - Stops $NAME and wait until it actually exits.
-restart    - Calls stop, then start (hard restart).
-debug      - Starts $NAME in debug move (no fork, log echo).
-config     - Spawns $EDITOR for editing $NAME config file.
+start	  - Starts $NAME as a daemon.
+stop	   - Stops $NAME and wait until it actually exits.
+restart	- Calls stop, then start (hard restart).
+debug	  - Starts $NAME in debug move (no fork, log echo).
+config	 - Spawns $EDITOR for editing $NAME config file.
 showconfig - Shows the location of the $NAME config file.
-boot       - Install $NAME as a startup service.
-unboot     - Remove $NAME from the startup services.
-upgrade    - Upgrades $NAME to the latest stable (or specify version).
-status     - Checks whether $NAME is currently running.
-help       - Displays this screen.
+boot	   - Install $NAME as a startup service.
+unboot	 - Remove $NAME from the startup services.
+upgrade	- Upgrades $NAME to the latest stable (or specify version).
+status	 - Checks whether $NAME is currently running.
+help	   - Displays this screen.
 
 EOF
 	ERROR=2
-    ;;
+	;;
 
-    esac
+	esac
 
 done
 
@@ -169,28 +181,28 @@ exit $ERROR
 ## are met:
 ##
 ## 1. Redistributions of source code must retain the above copyright
-##    notice, this list of conditions and the following disclaimer.
+##	notice, this list of conditions and the following disclaimer.
 ##
 ## 2. Redistributions in binary form must reproduce the above copyright
-##    notice, this list of conditions and the following disclaimer in
-##    the documentation and/or other materials provided with the
-##    distribution.
+##	notice, this list of conditions and the following disclaimer in
+##	the documentation and/or other materials provided with the
+##	distribution.
 ##
 ## 3. The end-user documentation included with the redistribution,
-##    if any, must include the following acknowledgment:
-##       "This product includes software developed by the
-##        Apache Software Foundation (http://www.apache.org/)."
-##    Alternately, this acknowledgment may appear in the software itself,
-##    if and wherever such third-party acknowledgments normally appear.
+##	if any, must include the following acknowledgment:
+##	   "This product includes software developed by the
+##		Apache Software Foundation (http://www.apache.org/)."
+##	Alternately, this acknowledgment may appear in the software itself,
+##	if and wherever such third-party acknowledgments normally appear.
 ##
 ## 4. The names "Apache" and "Apache Software Foundation" must
-##    not be used to endorse or promote products derived from this
-##    software without prior written permission. For written
-##    permission, please contact apache@apache.org.
+##	not be used to endorse or promote products derived from this
+##	software without prior written permission. For written
+##	permission, please contact apache@apache.org.
 ##
 ## 5. Products derived from this software may not be called "Apache",
-##    nor may "Apache" appear in their name, without prior written
-##    permission of the Apache Software Foundation.
+##	nor may "Apache" appear in their name, without prior written
+##	permission of the Apache Software Foundation.
 ##
 ## THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
 ## WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
