@@ -1,6 +1,6 @@
 {
 	"name": "poolnoodle",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "A simple HTTP web server with managed child worker pools.",
 	"author": "Joseph Huckaby <jhuckaby@gmail.com>",
 	"homepage": "https://github.com/jhuckaby/PoolNoodle",
@@ -30,7 +30,7 @@
 		"pixl-logger": "^1.0.16",
 		"pixl-server": "^1.0.17",
 		"pixl-server-web": "^1.1.11",
-		"pixl-server-pool": "^1.0.8",
+		"pixl-server-pool": "^1.1.0",
 		"pixl-boot": "^1.0.2",
 		"pixl-acl": "^1.0.2"
 	},
