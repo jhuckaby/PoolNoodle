@@ -37,6 +37,15 @@
 			- [Script Additions](#script-additions)
 			- [Script Logging](#script-logging)
 		+ [Static Hosting](#static-hosting)
+		+ [Redirects](#redirects)
+		+ [Proxies](#proxies)
+		+ [URL Rewrites](#url-rewrites)
+		+ [Advanced Routing](#advanced-routing)
+			- [Advanced API Routes](#advanced-api-routes)
+			- [Advanced Static Hosting](#advanced-static-hosting)
+			- [Advanced Redirects](#advanced-redirects)
+			- [Advanced Proxies](#advanced-proxies)
+			- [Advanced URL Rewrites](#advanced-url-rewrites)
 		+ [Virtual Hosts](#virtual-hosts)
 		+ [Custom Pools](#custom-pools)
 		+ [Access Control Lists](#access-control-lists)
@@ -56,6 +65,7 @@
 	* [Debug Log](#debug-log)
 	* [Error Log](#error-log)
 	* [Transaction Log](#transaction-log)
+	* [Log Archives](#log-archives)
 - [License](#license)
 
 # Usage
@@ -333,7 +343,7 @@ Here are brief descriptions of the properties in the file.  More details are in 
 
 ### Routes
 
-Each application may define one or more "routes", which are URI patterns that map to custom Node.js script handlers.  The configuration syntax is an Object with keys set to the URI match patterns (regexp as string), and the values set to filesystem paths to the scripts to handle requests.  Example:
+Each application may define one or more "routes", which are URI patterns that map to custom Node.js script handlers.  The configuration syntax is an Object with keys set to the URI match patterns (regex as string), and the values set to filesystem paths to the scripts to handle requests.  Example:
 
 ```js
 "routes": {
@@ -457,7 +467,7 @@ This would produce a log entry like the following:
 
 ### Static Hosting
 
-In addition to routing requests to custom Node.js scripts, you can also host static files in custom locations.  Static files are served from the parent (web server) process, and not routed to workers (for efficiency).  To set this up, declare a `static` object in your app's configuration file.  The object keys should be URI match patterns (regexp strings), and the values should be base filesystem paths where your static files live.  Example:
+In addition to routing requests to custom Node.js scripts, you can also host static files in custom locations.  Static files are served from the parent (web server) process, and not routed to workers (for efficiency).  To set this up, declare a `static` object in your app's configuration file.  The object keys should be URI match patterns (regex strings), and the values should be base filesystem paths where your static files live.  Example:
 
 ```js
 "static": {
@@ -507,9 +517,242 @@ Then your client-side HTML code could import the libraries like this:
 
 Make sure you take a peek inside the NPM modules you download to see where they hide their client-side distribution files, e.g. pre-built files ready for HTML inclusion.
 
+### Redirects
+
+In addition to hosting APIs and local static files, you can also configure simple HTTP redirects.  These are actual external redirect responses (i.e. `HTTP 302`) sent back to the client.  To set this up, declare a `redirects` object in your app's configuration file.  The object keys should be URI match patterns (regex strings), and the values should be fully-qualified URLs.  Example:
+
+```js
+"redirects": {
+	"^/testapp/google/(.+)": "https://www.google.com/search?q=$1",
+	"^/testapp/bing/(.+)": "https://www.bing.com/search?q=$1"
+}
+```
+
+As you can see in the above example, you can use regular expression groups in the URI match pattern, and expand them in the URL using `$1`, `$2`, etc.
+
+The HTTP response code is `302 Found` by default.  To change this, see the [Advanced Routing](#advanced-routing) section below.
+
+### Proxies
+
+PoolNoodle has support for configuring proxies inside your applications.  A proxy will match certain URI patterns, and forward the requests to a secondary hostname and port, and handle passing the response back to the client.  To set this up, declare a `proxies` object in your app's configuration file.  The object keys should be URI match patterns (regex strings), and the values should be a target URL prefix (to which the request URI path is appended).  Example:
+
+```js
+"proxies": {
+	"^/testapp/myproxy": "http://myserver.com:1234"
+}
+```
+
+This would capture incoming requests that matched the `^/testapp/myproxy` URI pattern, and proxy them to the `http://myserver.com:1234` base URL.  Note that the original request URI path is appended to the proxy URL.  So for example, if a URL path came in like this:
+
+```
+/testapp/myproxy/foo
+```
+
+The downstream request URL would be:
+
+```
+http://myserver.com:1234/testapp/myproxy/foo
+```
+
+Lots of options are available for configuring how the proxy subrequests are made.  See [Advanced Routing](#advanced-routing) for more details on this.
+
+### URL Rewrites
+
+Sometimes you just need to remap (rewrite) one URL pattern to another on an incoming request.  This is also known as an "internal redirect".  This feature will match URI patterns, and remap (alter) the URL, then allow it to match other apps and routes.  URL rewrites are applied to requests very early, before a route and even before an app has been chosen.  To use these, declare a `rewrites` object in your app's configuration file.  The object keys should be URI match patterns (regex strings), and the values should be a URI path replacement.  Example:
+
+```js
+"rewrites": {
+	"^/testapp/oldpath/(.+)": "/testapp/newpath/$1"
+},
+```
+
+As you can see in the above example, you can use regular expression groups in the URI match pattern, and expand them in the URL using `$1`, `$2`, etc.
+
+Instead of sending the client a hard redirect response (e.g. with [Redirects](#redirects)), these are *internally* redirected, by altering the incoming URI in place, then allowing the modified URI to be routed to other targets (and even other apps).  The client never sees the rewritten URL.
+
+Multiple URL rewrites may be applied to the same URL on the same request, depending on how you have things configured.  There is also an emergency brake set at 32 rewrites allowed per request, to prevent infinite loops.
+
+### Advanced Routing
+
+PoolNoodle supports an alternate way of defining app routes, static hosting, redirects and proxies, that is more verbose and customizable.  The `routes` object in your app's configuration file can be an array of objects, with each object defining a route type and specific route options.  This also allows you to define a matching order, so certain routes can take precedence over others.  Here is an example:
+
+```js
+"routes": [
+	{
+		"type": "script",
+		"uri_match": "^/testapp/api",
+		"path": "api.js"
+	},
+	{
+		"type": "redirect",
+		"uri_match": "^/testapp/google/(.+)",
+		"location": "https://www.google.com/search?q=$1"
+	},
+	{
+		"type": "proxy",
+		"uri_match": "^/testapp/proxythis",
+		"target_protocol": "http:",
+		"target_hostname": "myserver.com",
+		"target_port": 1234
+	},
+	{
+		"type": "static",
+		"uri_match": "^/testapp",
+		"path": "htdocs"
+	}
+],
+```
+
+The array is matched from top to bottom, so routes with higher priorities should be placed above the others.
+
+Each route object should have a `type` property, which should be one of the following strings:
+
+| Type | Description |
+|------|-------------|
+| `script` | An API route to a Node.js script.  See [Advanced API Routes](#advanced-api-routes). |
+| `static` | A static host directory.  See [Advanced Static Hosting](#advanced-static-hosting). |
+| `redirect` | A HTTP redirect configuration.  See [Advanced Redirects](#advanced-redirects). |
+| `proxy` | A proxy configuration for forwarding HTTP requests.  See [Advanced Proxies](#advanced-proxies). |
+| `rewrite` | A URL rewrite pattern and replacement.  See [Advanced URL Rewrites](#advanced-url-rewrites). |
+
+See the following sections for details on each route type.
+
+#### Advanced API Routes
+
+Each application may define one or more API (i.e. script) routes, which are URI patterns that map to custom Node.js script handlers.  This is equivalent to the [Routes](#routes) shorthand definitions described above, but declaring routes in this way allows you specify extra parameters, and control the priority (matching order).  Here is an example:
+
+```js
+{
+	"type": "script",
+	"uri_match": "^/testapp/api",
+	"path": "api.js"
+}
+```
+
+Here are all the properties you can set for API routes:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | String | **(Required)** This specifies the route type.  Set this to `script` for API routes. |
+| `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
+| `path` | String | **(Required)** The destination Node.js script path to activate for API calls. |
+| `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+
+#### Advanced Static Hosting
+
+In addition to routing requests to custom Node.js scripts, you can also host static files in custom locations.  Static files are served from the parent (web server) process, and not routed to workers (for efficiency).  This is equivalent to the [Static Hosting](#static-hosting) shorthand definitions described above, but declaring routes in this way allows you specify extra parameters, and control the priority (matching order).  Here is an example:
+
+```js
+{
+	"type": "static",
+	"uri_match": "^/testapp",
+	"path": "htdocs"
+}
+```
+
+Here are all the properties you can set for static hosting routes:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | String | **(Required)** This specifies the route type.  Set this to `static` for static host routes. |
+| `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
+| `path` | String | **(Required)** The destination directory filesystem path, housing the files to be statically served. |
+| `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+
+#### Advanced Redirects
+
+In addition to hosting APIs and local static files, you can also configure simple HTTP redirects.  These are actual external redirect responses (i.e. `HTTP 302`) sent back to the client.  This is equivalent to the [Redirects](#redirects) shorthand definitions described above, but declaring routes in this way allows you specify extra parameters, and control the priority (matching order).  Here is an example:
+
+```js
+{
+	"type": "redirect",
+	"uri_match": "^/testapp/google/(.+)",
+	"location": "https://www.google.com/search?q=$1"
+}
+```
+
+Here are all the properties you can set for redirect routes:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | String | **(Required)** This specifies the route type.  Set this to `redirect` for redirect routes. |
+| `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path, which may contain regex groups. |
+| `location` | String | **(Required)** The destination URL, which should be fully-qualified.  This may contain regex replacement macros (e.g. `$1`). |
+| `encode` | Boolean | Set this to `true` to perform URL encoding on the regex replacement groups. |
+| `status` | String | Use this to customize the HTTP response code and status line.  It defaults to `302 Found`. |
+| `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+
+#### Advanced Proxies
+
+A proxy will match certain URI patterns, and forward the requests to a secondary hostname and port, and handle passing the response back to the client.  This is equivalent to the [Proxies](#proxies) shorthand definitions described above, but declaring routes in this way allows you specify extra parameters, and control the priority (matching order).  Here is an example:
+
+```js
+{
+	"type": "proxy",
+	"uri_match": "^/testapp/proxythis",
+	"target_protocol": "http:",
+	"target_hostname": "myserver.com",
+	"target_port": 1234
+},
+```
+
+Here are all the properties you can set for proxy routes:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | String | **(Required)** This specifies the route type.  Set this to `proxy` for proxy routes. |
+| `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
+| `target_hostname` | String | **(Required)** The target hostname for the downstream request. |
+| `target_protocol` | String | The protocol to use for the downstream requests, e.g. `http:` or `https:`. Defaults to `http:`. |
+| `target_port` | Number | The port to use for the downstream requests, e.g. `3000`.  Defaults to `80` for HTTP, or `443` for HTTPS. |
+| `uri_prefix` | String | Optional URI path prefix to insert into the downstream URLs. |
+| `use_keep_alives` | Boolean | This controls whether HTTP Keep-Alives are used or not.  Defaults to `true`. |
+| `append_to_xff` | Boolean | This controls whether the client socket IP address is appended to the `X-Forwarded-For` header or not.  Defaults to `true`. |
+| `preserve_host` | Boolean | This controls whether the client `Host` header is passed to the downstream service or not.  Defaults to `true`. |
+| `insert_request_headers` | Object | Optionally insert custom request headers into the downstream service. |
+| `insert_response_headers` | Object | Optionally insert custom response headers into the client response. |
+| `scrub_request_headers` | String | Scrub (remove) special headers from the downstream request.  See below for details. |
+| `scrub_response_headers` | String | Scrub (remove) special headers from the client response.  See below for details. |
+| `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+
+The `scrub_request_headers` and `scrub_response_headers` properties scrub (i.e. discard and do not forward) special headers from the downstream request and client response, respectively.  Both properties are formatted as regular expressions wrapped in strings, and they are matched case-insensitively.  Here are the default values:
+
+```js
+{
+	"scrub_request_headers": "^(host|expect|content\\-length|connection)$",
+	"scrub_response_headers": "^(connection|transfer\\-encoding)$"
+}
+```
+
+The reason for scrubbing these headers it that they get either removed or replaced from one request to the other, so it is useless and often times an error to include them.  For example, the `Connection` header may differ between the client and back-end requests.
+
+#### Advanced URL Rewrites
+
+This feature will match URI patterns, and remap (alter) the URL *in place*, then allow it to target other apps and routes.  URL rewrites are applied to requests very early, before a route and even before an app has been chosen.  This is equivalent to the [URL Rewrites](#url-rewrites) shorthand definitions described above, but declaring routes in this way allows you control the priority (matching order).  Here is an example:
+
+```js
+{
+	"type": "rewrite",
+	"uri_match": "^/testapp/oldpath/(.+)",
+	"uri_replace": "/testapp/newpath/$1"
+}
+```
+
+Here are all the properties you can set for URL rewrites:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `type` | String | **(Required)** This specifies the route type.  Set this to `rewrite` for URL rewrites. |
+| `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
+| `uri_replace` | String | **(Required)** The replacement URI path, which may contain regex macros (e.g. `$1`, `$2`, etc.) |
+
+Multiple URL rewrites may be applied to the same URL on the same request, depending on how you have things configured.  There is also an emergency brake set at 32 rewrites allowed per request, to prevent infinite loops.
+
+Note that you cannot customize the ACL for URL rewrites, as they are merely passthrough filters.  The ACL, if applicable, should be configured on the final target route (i.e. where the final rewritten URL points to).
+
 ### Virtual Hosts
 
-All of the examples above use a URI-based match for routing.  You can also require that certain HTTP request headers match specific values, in order to route requests for your app.  The most commonly matched header is of course `host` (the hostname on the URL), to implement [name-based virtual hosting](https://en.wikipedia.org/wiki/Virtual_hosting#Name-based) or something kinda like it.  Consider this example:
+All of the examples above use a URI-based match for routing.  You can also require that certain HTTP request headers match specific values, in order to route requests for your app.  The most commonly matched header is of course `host` (the hostname on the URL), to implement [name-based virtual hosting](https://en.wikipedia.org/wiki/Virtual_hosting#Name-based).  Consider this example:
 
 ```js
 "headers": {
@@ -519,7 +762,7 @@ All of the examples above use a URI-based match for routing.  You can also requi
 
 This is basically an extra rule that says the request `host` header (Node.js lower-cases these keys) must start with `myapp.mycompany.com` for the requests to be routed to the app.  Note that these particular regular expressions are matched case-insensitively, so `MYAPP.MYCOMPANY.COM` would also qualify.
 
-Note that we aren't including the end-of-string (`$`) operator in the example regexp above, because the `host` request header may contain a port number, e.g. `myapp.mycompany.com:3020`.
+Note that we aren't including the end-of-string (`$`) operator in the example regex above, because the `host` request header may contain a port number, e.g. `myapp.mycompany.com:3020`.
 
 If you include multiple headers in the `headers` object, they *all* must match for the request to be considered for app routing.
 
@@ -751,7 +994,7 @@ Note that you may have to use `sudo` or become the root user to start the servic
 The `debug.sh` script actually overrides a variety of configuration parameters using command-line arguments.  This is the actual command it executes:
 
 ```
-node --trace-warnings $HOMEDIR/lib/main.js --debug --debug_level 9 --worker_echo --color --notify --PoolNoodle.pools.default.min_children 1 --PoolNoodle.pools.default.max_children 1 --WebServer.http_static_ttl 0 "$@"
+node --trace-warnings $HOMEDIR/lib/main.js --debug --debug_level 9 --echo --worker_echo --notify --PoolNoodle.pools.default.min_children 1 --PoolNoodle.pools.default.max_children 1 --WebServer.http_static_ttl 0 "$@"
 ```
 
 Here is an explanation of the arguments:
@@ -762,8 +1005,8 @@ Here is an explanation of the arguments:
 | `$HOMEDIR/lib/main.js` | This is the path to the main executable script for PoolNoodle. |
 | `--debug` | This enables debug mode in [pixl-server](https://github.com/jhuckaby/pixl-server) which causes the main process to run in the foreground (no daemon fork). |
 | `--debug_level 9` | This sets the debug logging level to 9 (the loudest), so every debug message is logged. |
+| `--echo` | This will echo the main PoolNoodle parent debug log to the console, so you can see the inner workings. |
 | `--worker_echo` | This will echo the worker debug log to the console, so you can see your own application debug messages. |
-| `--color` | This activates color-coded log columns in the terminal echo. |
 | `--notify` | This enables desktop notifications for worker crashes, using the [node-notifier](https://www.npmjs.com/package/node-notifier) module. |
 | `--PoolNoodle.pools.default.min_children 1` | Override the default worker pool to launch only 1 child process. |
 | `--PoolNoodle.pools.default.max_children 1` | Override the default worker pool to launch only 1 child process. |
@@ -882,7 +1125,7 @@ The Recent Requests table lists the most recent 100 completed requests.  It has 
 - HTTP Response
 - Data Received
 - Data Sent
-- Elapsed TIme
+- Elapsed Time
 
 ### JSON Stats API
 
@@ -1263,11 +1506,17 @@ A transaction is a completed back-end HTTP request, and is denoted by the `categ
 
 These are logged to the main `Server.log` file.
 
+## Log Archives
+
+Every night at midnight (local server time), the logs can be archived (gzipped) to a separate location.  The `log_archive_path` configuration parameter specifies the path, and the directory naming / filenaming convention of the archive files.  It can utilize date placeholders including `[yyyy]`, `[mm]` and `[dd]`.
+
+This can be a partial path, relative to the PoolNoodle base directory (`/opt/poolnoodle`) or a full path to a custom location.  It defaults to `logs/archives/[yyyy]/[mm]/[dd]/[filename]-[yyyy]-[mm]-[dd].log.gz`.
+
 # License
 
 **The MIT License (MIT)**
 
-*Copyright (c) 2018 by Joseph Huckaby.*
+*Copyright (c) 2018 - 2021 by Joseph Huckaby.*
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

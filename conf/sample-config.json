@@ -2,6 +2,7 @@
 	"log_dir": "logs",
 	"log_filename": "Server.log",
 	"worker_log_filename": "Worker.log",
+	"log_archive_path": "logs/archives/[yyyy]/[mm]/[dd]/[filename]-[yyyy]-[mm]-[dd].log.gz",
 	"log_crashes": true,
 	"pid_file": "logs/pid.txt",
 	"debug_level": 9,
