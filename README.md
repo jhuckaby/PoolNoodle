@@ -705,7 +705,8 @@ Here are all the properties you can set for proxy routes:
 | `target_hostname` | String | **(Required)** The target hostname for the downstream request. |
 | `target_protocol` | String | The protocol to use for the downstream requests, e.g. `http:` or `https:`. Defaults to `http:`. |
 | `target_port` | Number | The port to use for the downstream requests, e.g. `3000`.  Defaults to `80` for HTTP, or `443` for HTTPS. |
-| `uri_prefix` | String | Optional URI path prefix to insert into the downstream URLs. |
+| `path_prefix` | String | Optional URI path prefix to insert into the downstream URLs. |
+| `dir_index` | String | Optionally append a downstream filename to directory requests, e.g. `index.html`. |
 | `use_keep_alives` | Boolean | This controls whether HTTP Keep-Alives are used or not.  Defaults to `true`. |
 | `append_to_xff` | Boolean | This controls whether the client socket IP address is appended to the `X-Forwarded-For` header or not.  Defaults to `true`. |
 | `preserve_host` | Boolean | This controls whether the client `Host` header is passed to the downstream service or not.  Defaults to `true`. |
