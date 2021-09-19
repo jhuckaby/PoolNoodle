@@ -69,6 +69,11 @@
 	
 	"PoolManager": {
 		"uncatch": true
+	},
+	
+	"Debug": {
+		"enabled": false,
+		"secret_key": ""
 	}
 	
 }
