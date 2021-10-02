@@ -425,6 +425,7 @@ When your script is first loaded, your `exports` object is augmented with a few 
 |----------|------|-------------|
 | `__name` | String | A unique identifier for your script, used for logging.  This defaults to your app name and script filename, joined with a hyphen. |
 | `config` | Object | A reference to your application's JSON configuration file, pre-parsed and in object form. |
+| `serverConfig` | Object | A reference to the main PoolNoodle JSON configuration file, pre-parsed and in object form. |
 | `logger` | Object | An instance of the [pixl-logger](https://github.com/jhuckaby/pixl-logger) class, used for logging purposes. |
 | `debuglevel` | Integer | Debug logging level, used by the `logDebug()` method, set by the `worker_debug_level` configuration property. |
 | `logDebug()` | Function | A convenience method provided to allow for easy debug logging (see [Script Logging](#script-logging). |
