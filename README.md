@@ -513,7 +513,7 @@ Here is a more complete example with all properties specified:
 }
 ```
 
-Using the `args` object, you can pass configuration settings (e.g. `sync`) to the logger.  See the [pixl-logger](https://github.com/jhuckaby/pixl-logger) for more details.
+Using the `args` object, you can pass configuration settings (e.g. `sync`) to the logger.  See the [pixl-logger docs](https://github.com/jhuckaby/pixl-logger) for more details.
 
 Note that PoolNoodle will still populate the `component` column for you, if you use the built-in script `logDebug()` method and family.
 
