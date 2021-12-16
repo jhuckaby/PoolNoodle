@@ -36,6 +36,7 @@
 			- [Script Methods](#script-methods)
 			- [Script Additions](#script-additions)
 			- [Script Logging](#script-logging)
+			- [Custom Log](#custom-log)
 		+ [Static Hosting](#static-hosting)
 		+ [Redirects](#redirects)
 		+ [Proxies](#proxies)
@@ -313,7 +314,7 @@ To combat filesystem event noise that can happen when using [fs.watch](https://n
 
 An "application" in PoolNoodle is a collection of routes that point to custom Node.js scripts, and is defined by a single JSON configuration file.  Your route scripts are preloaded and live in the pool worker processes.  Incoming requests that match your routes are passed to your scripts for processing, and your response is sent back to the client.  You can also define routes that point to static files.
 
-Your scripts (and static files) can live wherever you want on the filesystem.  The only file you need to add to PoolNoodle is your application's JSON configuration file, which should be dropped into the `/opt/poolnoodle/conf/apps/` directory, and named with a `.json` suffix.  Here is an example file:
+Your scripts (and static files) can live wherever you want on the filesystem.  The only file you need to add to PoolNoodle is your application's JSON configuration file, which should be dropped into the `/opt/poolnoodle/conf/apps/` directory, and named with a `.json` suffix.  This can of course be a symlink.  Here is an example file:
 
 ```js
 {
@@ -340,6 +341,7 @@ Here are brief descriptions of the properties in the file.  More details are in 
 | `acl` | Mixed | Optionally set an IP-based ACL ([Access Control Lists](#access-control-lists)) for the application (`false` allows all). |
 | `headers` | Object | Optionally limit your application to requests that match certain headers.  See [Virtual Hosts](#virtual-hosts) below. |
 | `pools` | Object | Optionally define additional custom worker pools.  See [Custom Pools](#custom-pools) below. |
+| `log` | Object | Optionally define your own custom application log.  See [Custom Log](#custom-log) below. |
 
 ### Routes
 
@@ -364,6 +366,8 @@ Note that you don't necessarily need to specify fully-qualified filesystem paths
 ```
 
 Your script files are watched for changes, and worker pools are automatically reloaded when needed.
+
+For more advanced routing options, see the [Advanced Routing](#advanced-routing) section below.
 
 ### Scripts
 
@@ -434,7 +438,7 @@ When your script is first loaded, your `exports` object is augmented with a few 
 
 #### Script Logging
 
-Your script's `exports` object is augmented with three methods you can use to generate log messages.  These will be appended to the `Worker.log` file, with most columns automatically populated.  You only need to specify two columns, the code (or debug level), and a message.  Here is an example of a debug log message:
+Your script's `exports` object is augmented with three methods you can use to generate log messages.  By default, these will be appended to the PoolNoodle `Worker.log` file, with most columns automatically populated.  In most cases you only need to specify two columns, the code (or debug level), and a message.  Here is an example of a debug log message:
 
 ```js
 this.logDebug(9, "Log message here!");
@@ -465,6 +469,53 @@ This would produce a log entry like the following:
 ```
 [TestApp-api.js][debug][9][Log message here!][{"foo":"bar","baz":12345}]
 ```
+
+#### Custom Log
+
+If you would prefer that your app logs to its own separate log file, PoolNoodle can facilitate this for you.  Simply define a `log` object in your app's configuration file, and fill it thusly:
+
+```json
+{
+	"log": {
+		"path": "/var/log/testapp.log",
+		"level": 5
+	}
+}
+```
+
+This would log to the `/var/log/testapp.log` at debug level 5.  If not specified, the default set of log columns is defined as follows:
+
+```json
+["hires_epoch", "date", "hostname", "pid", "component", "category", "code", "msg", "data"]
+```
+
+Here are all the properties you can set in the `log` object:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `path` | String | A fully-qualified filesystem path to the location of the log file.  The parent directories should already exist. |
+| `level` | Number | The debug level for the log file, from `1` (quietest) to `9` (loudest).  If omitted, it will be set to the global `worker_debug_level` value. |
+| `columns` | Array | Optionally customize the columns in the log. |
+| `args` | Object | Optionally pass additional arguments to [pixl-logger](https://github.com/jhuckaby/pixl-logger).  See below for an example. |
+
+Here is a more complete example with all properties specified:
+
+```json
+{
+	"log": {
+		"path": "/var/log/testapp.log",
+		"level": 5,
+		"columns": ["hires_epoch", "date", "hostname", "pid", "component", "category", "code", "msg", "data"],
+		"args": {
+			"sync": true
+		}
+	}
+}
+```
+
+Using the `args` object, you can pass configuration settings (e.g. `sync`) to the logger.  See the [pixl-logger](https://github.com/jhuckaby/pixl-logger) for more details.
+
+Note that PoolNoodle will still populate the `component` column for you, if you use the built-in script `logDebug()` method and family.
 
 ### Static Hosting
 
