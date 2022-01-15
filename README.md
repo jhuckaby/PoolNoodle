@@ -342,6 +342,7 @@ Here are brief descriptions of the properties in the file.  More details are in 
 | `headers` | Object | Optionally limit your application to requests that match certain headers.  See [Virtual Hosts](#virtual-hosts) below. |
 | `pools` | Object | Optionally define additional custom worker pools.  See [Custom Pools](#custom-pools) below. |
 | `log` | Object | Optionally define your own custom application log.  See [Custom Log](#custom-log) below. |
+| `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this app (via HTTP 301 redirect). |
 
 ### Routes
 
@@ -689,6 +690,7 @@ Here are all the properties you can set for API routes:
 | `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
 | `path` | String | **(Required)** The destination Node.js script path to activate for API calls. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+| `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 
 #### Advanced Static Hosting
 
@@ -710,6 +712,7 @@ Here are all the properties you can set for static hosting routes:
 | `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
 | `path` | String | **(Required)** The destination directory filesystem path, housing the files to be statically served. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+| `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 
 #### Advanced Redirects
 
@@ -733,6 +736,7 @@ Here are all the properties you can set for redirect routes:
 | `encode` | Boolean | Set this to `true` to perform URL encoding on the regex replacement groups. |
 | `status` | String | Use this to customize the HTTP response code and status line.  It defaults to `302 Found`. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+| `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 
 #### Advanced Proxies
 
@@ -767,6 +771,7 @@ Here are all the properties you can set for proxy routes:
 | `scrub_request_headers` | String | Scrub (remove) special headers from the downstream request.  See below for details. |
 | `scrub_response_headers` | String | Scrub (remove) special headers from the client response.  See below for details. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+| `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 
 The `scrub_request_headers` and `scrub_response_headers` properties scrub (i.e. discard and do not forward) special headers from the downstream request and client response, respectively.  Both properties are formatted as regular expressions wrapped in strings, and they are matched case-insensitively.  Here are the default values:
 
