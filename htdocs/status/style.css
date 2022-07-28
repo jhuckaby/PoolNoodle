@@ -573,14 +573,17 @@ div.subtitle {
 	font-size: 16px;
 	font-weight: bold;
 	line-height: 20px;
-	color: #999;
-	/* color: #3f7ed5; */
+	/* color: #999; */
+	color: #3f7ed5;
 	text-shadow: 0px 1px 0px white;
+	
 	padding-left: 0px;
 	padding-right: 3px;
-	margin-bottom: 10px;
 	
-	border-bottom: 1px solid #ccc;
+	margin-top: 20px;
+	margin-bottom: 3px;
+	
+	/* border-bottom: 1px solid #ccc; */
 }
 
 div.subtitle_widget {
@@ -809,7 +812,7 @@ div.message.success div.message_inner { background: url(../images/check_24.png) 
 /* Footer */
 
 #d_footer {
-	margin: 7px 0px 10px 0px;
+	margin: 20px 0px 10px 0px;
 	font-size:11px; cursor:default; color:#aaa;
 }
 #d_footer a { color: #888; }
@@ -1020,12 +1023,6 @@ span.color_label.checkbox.plain {
 	-moz-border-radius-bottomright: 5px;
 	border-bottom-left-radius: 5px;
 	border-bottom-right-radius: 5px;
-}
-
-.dialog_shadow {
-	/* box-shadow: rgba(0,0,0,0.2) 5px 5px 8px;
-	-webkit-box-shadow: rgba(0,0,0,0.2) 5px 5px 8px;
-	-moz-box-shadow: rgba(0,0,0,0.2) 5px 5px 8px; */
 }
 
 .dialog_simple {
