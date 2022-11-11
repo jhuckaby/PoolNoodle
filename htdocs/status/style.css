@@ -317,8 +317,9 @@ input {
 	margin-left: 4px;
 	height: 40px;
 	line-height: 40px;
-	font-size: 22px;
-	color: #777;
+	font-size: 26px;
+	font-weight: bold;
+	color: #3f7ed5;
 	opacity: 0.9;
 	cursor: default;
 	text-shadow: #fff 1px 1px;

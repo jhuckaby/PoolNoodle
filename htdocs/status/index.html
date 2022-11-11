@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>PoolNoodle Status</title>
+		<title>...</title>
 		<link rel="stylesheet" href="style.css">
 		<script>
 			var $ = function(query) { return document.querySelector(query); };
@@ -36,7 +36,7 @@
 				
 				refresh: function() {
 					// fetch data from server and render it
-					fetch('/status/api')
+					fetch('/status/api?extended=1')
 						.then( function(res) {
 							if (!res.ok) throw new Error("HTTP " + res.status + " " + res.statusText);
 							return res.json();
@@ -58,20 +58,26 @@
 					var html = '';
 					var now = hires_time_now();
 					this.stats = json;
+					this.name = json.web.server.name;
+					document.title = this.name + " Status";
+					
+					if (this.name == 'PoolNoodle') {
+						$('#d_header_logo').style.display = 'block';
+						$('#d_header_title').style.display = 'none';
+					}
+					else {
+						$('#d_header_logo').style.display = 'none';
+						$('#d_header_title').style.display = 'block';
+						$('#d_header_title').innerHTML = this.name;
+					}
 					
 					var total_cpu_pct = json.cpu.pct || 0;
 					var total_mem_bytes = json.mem.rss || 0;
 					
-					for (var idx = 0, len = json.workers.length; idx < len; idx++) {
-						var worker = json.workers[idx];
-						total_cpu_pct += worker.stats.cpu.pct || 0;
-						total_mem_bytes += worker.stats.mem.rss || 0;
-					}
-					
 					html += '<fieldset><legend>Server Status</legend>';
 						
 						html += '<div style="float:left; width:25%;">';
-							html += '<div class="info_label">PoolNoodle Version</div>';
+							html += '<div class="info_label">' + this.name + ' Version</div>';
 							html += '<div class="info_value">v' + json.version + '</div>';
 							
 							html += '<div class="info_label">Node.js Version</div>';
@@ -465,8 +471,8 @@
 		<!-- Logo and title -->
 		<div id="d_header">
 			<div class="container">
-				<div id="d_header_logo" class="left"></div>
-				<div id="d_header_title" class="left"></div>
+				<div id="d_header_logo" class="left" style="display:none"></div>
+				<div id="d_header_title" class="left" style="display:none"></div>
 				<div id="d_header_user_container" class="right">
 					<div class="header_auto_refresh_container">
 						<input type="checkbox" id="fe_auto_refresh" value="1" onChange="app.setAutoRefresh(this.checked)"/><label for="fe_auto_refresh">Auto-Refresh</label>
@@ -495,7 +501,7 @@
 			<!-- Footer -->
 			<div id="d_footer">
 				<div class="left">
-					PoolNoodle &copy; 2022 PixlCore.com. Released under the MIT License.
+					&copy; 2022 PixlCore.com. Released under the MIT License.
 				</div>
 				<div id="d_footer_version" class="right">
 					
