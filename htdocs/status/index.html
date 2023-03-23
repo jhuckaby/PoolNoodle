@@ -200,6 +200,9 @@
 					cols = ['Pool', 'PID', 'State', 'Memory', 'CPU', 'Uptime', 'Reqs Served', 'Avg Req Time', 'Active Reqs'];
 					html += '<div class="subtitle">Active Workers</div>';
 					html += getBasicTable(json.workers, cols, 'worker', function(row) {
+						if (!row.stats) row.stats = {};
+						if (!row.stats.mem) row.stats.mem = {};
+						if (!row.stats.cpu) row.stats.cpu = {};
 						return [
 							row.pool_id,
 							row.pid,
