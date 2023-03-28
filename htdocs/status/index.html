@@ -243,7 +243,7 @@
 					});
 					
 					// table of recent requests
-					cols = ['Req ID', 'App/Plugin', 'Public IP', 'URL', 'Response', 'Bytes Out', 'Elapsed'];
+					cols = ['Req ID', 'App/Plugin', 'Public IP', 'Method', 'URL', 'Response', 'Bytes Out', 'Elapsed'];
 					html += '<div class="subtitle">Recent Requests</div>';
 					html += getBasicGrid(json.web.recent, cols, 'request', function(row) {
 						var perf = row.perf || { perf: {}, counters: {} };
@@ -253,6 +253,7 @@
 							row.id,
 							perf.app_id || perf.plugin || 'n/a',
 							row.ip,
+							row.method,
 							'<a href="' + url + '" target="_blank">' + url + '</a>',
 							// '<div class="url_disp">' + expando_text(url, 80, 'More') + '</div>',
 							row.code + ' ' + row.status,
