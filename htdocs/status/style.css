@@ -1120,6 +1120,7 @@ div.progress_bar_container.indeterminate > div.progress_bar_inner {
 /* Info Boxes */
 
 div.info_label {
+	margin-top: 5px;
 	font-size: 11px;
 	font-weight: bold;
 	color: #999;
@@ -1130,7 +1131,7 @@ div.info_label {
 
 div.info_value {
 	margin-top: 1px;
-	margin-bottom: 10px;
+	margin-bottom: 15px;
 	font-weight: bold;
 	color: #555;
 }
@@ -1155,4 +1156,52 @@ div.info_value {
 .url_disp {
 	max-width: 50vw;
 	word-break: break-all; 
+}
+
+.grid_table {
+	display: grid;
+	/* grid-template-columns: repeat(5, auto); */
+	grid-column-gap: 0px;
+	grid-row-gap: 5px;
+	margin-bottom: 10px;
+}
+
+.grid_table > ul {
+	display:contents;
+}
+
+.grid_table > ul > div {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.grid_table > ul > div.td {
+	padding-left: 5px;
+	padding-right: 15px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid #eee;
+	background: #fff;
+}
+
+.grid_table > ul > div.th {
+	font-size: 13px; 
+	height: 20px;
+	line-height: 20px;
+	cursor: default; 
+	font-weight: bold; 
+	text-align: left;
+	padding-left: 5px;
+	padding-right: 15px;
+	color: #666;
+	border-top: 1px solid #ccc;
+	background: #f8f8f8;
+}
+
+.grid_table > ul > div.spacer {
+	padding-top: 10px; 
+	padding-bottom: 10px; 
+	font-weight: bold;
+	text-align: center;
 }

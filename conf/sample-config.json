@@ -11,6 +11,7 @@
 	
 	"PoolNoodle": {
 		"stats_uri_match": "^/status/api",
+		"log_stats": false,
 		"watcher_enabled": true,
 		"watcher_cooldown_ms": 500,
 		

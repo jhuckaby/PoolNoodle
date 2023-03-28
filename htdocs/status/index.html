@@ -203,6 +203,7 @@
 						if (!row.stats) row.stats = {};
 						if (!row.stats.mem) row.stats.mem = {};
 						if (!row.stats.cpu) row.stats.cpu = {};
+						if (!row.stats.start_time) row.stats.start_time = now;
 						return [
 							row.pool_id,
 							row.pid,
@@ -242,18 +243,20 @@
 					});
 					
 					// table of recent requests
-					cols = ['App/Plugin', 'IP Address', 'URL', 'Response', 'Bytes In', 'Bytes Out', 'Elapsed Time'];
+					cols = ['Req ID', 'App/Plugin', 'Public IP', 'URL', 'Response', 'Bytes Out', 'Elapsed'];
 					html += '<div class="subtitle">Recent Requests</div>';
-					html += getBasicTable(json.web.recent, cols, 'request', function(row) {
+					html += getBasicGrid(json.web.recent, cols, 'request', function(row) {
 						var perf = row.perf || { perf: {}, counters: {} };
 						var url = row.proto + '://' + row.host + row.uri;
 						
 						return [
+							row.id,
 							perf.app_id || perf.plugin || 'n/a',
-							row.ips[ row.ips.length - 1 ],
-							'<div class="url_disp">' + expando_text(url, 80, 'More') + '</div>',
+							row.ip,
+							'<a href="' + url + '" target="_blank">' + url + '</a>',
+							// '<div class="url_disp">' + expando_text(url, 80, 'More') + '</div>',
 							row.code + ' ' + row.status,
-							get_text_from_bytes( perf.counters.bytes_in || 0 ),
+							// get_text_from_bytes( perf.counters.bytes_in || 0 ),
 							get_text_from_bytes( perf.counters.bytes_out || 0 ),
 							perf.perf.total + ' ms'
 						];
@@ -467,6 +470,53 @@
 				
 				return html;
 			};
+			
+			function getBasicGrid(rows, cols, data_type, callback) {
+				// get html for basic grid that uses ellipsis for column overflow
+				var html = '';
+				
+				// pagination
+				html += '<div class="pagination hide">';
+				html += '<table cellspacing="0" cellpadding="0" border="0" width="100%"><tr>';
+				
+				html += '<td align="left" width="33%">';
+				if (cols.headerLeft) html += cols.headerLeft;
+				else html += commify(rows.length) + ' ' + pluralize(data_type, rows.length) + '';
+				html += '</td>';
+				
+				html += '<td align="center" width="34%">';
+					html += cols.headerCenter || '&nbsp;';
+				html += '</td>';
+				
+				html += '<td align="right" width="33%">';
+					html += cols.headerRight || 'Page 1 of 1';
+				html += '</td>';
+				
+				html += '</tr></table>';
+				html += '</div>';
+				
+				html += '<div style="margin-top:4px;">';
+				html += '<div class="grid_table" style="grid-template-columns: repeat(' + cols.length + ', auto)">';
+				
+				html += '<ul><div class="th">' + cols.join('</div><div class="th">') + '</div></ul>';
+				
+				for (var idx = 0, len = rows.length; idx < len; idx++) {
+					var row = rows[idx];
+					var tds = callback(row, idx);
+					html += '<ul><div class="td">' + tds.join('</div><div class="td">') + '</div></ul>';
+				} // foreach row
+				
+				if (!rows.length) {
+					html += '<ul><div class="spacer" style="grid-column-start: span ' + cols.length + ';">';
+					html += 'No '+pluralize(data_type)+' found.';
+					html += '</div></ul>';
+				}
+				
+				html += '</div>'; // grid_table
+				html += '</div>'; // wrapper
+				
+				return html;
+			};
 		</script>
 	</head>
 	<body>
@@ -504,7 +554,7 @@
 			<!-- Footer -->
 			<div id="d_footer">
 				<div class="left">
-					&copy; 2022 PixlCore.com. Released under the MIT License.
+					&copy; 2023 PixlCore.com. Released under the MIT License.
 				</div>
 				<div id="d_footer_version" class="right">
 					
