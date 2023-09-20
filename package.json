@@ -38,7 +38,7 @@
 		"pixl-request": "^1.0.37"
 	},
 	"devDependencies": {
-		"node-notifier": "5.3.0"
+		"node-notifier": "8.0.1"
 	},
 	"scripts": {
 		"boot": "pixl-boot install --script bin/control.sh",
