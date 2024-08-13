@@ -50,6 +50,7 @@
 		+ [Virtual Hosts](#virtual-hosts)
 		+ [Custom Pools](#custom-pools)
 		+ [Access Control Lists](#access-control-lists)
+		+ [Rate Limiting](#rate-limiting)
 	* [Plugins](#plugins)
 		+ [Worker Plugins](#worker-plugins)
 	* [Command-Line Usage](#command-line-usage)
@@ -343,6 +344,8 @@ Here are brief descriptions of the properties in the file.  More details are in 
 | `pools` | Object | Optionally define additional custom worker pools.  See [Custom Pools](#custom-pools) below. |
 | `log` | Object | Optionally define your own custom application log.  See [Custom Log](#custom-log) below. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this app (via HTTP 301 redirect). |
+| `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this app.  See [Rate Limiting](#rate-limiting) below. |
+| `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this app.  See [Rate Limiting](#rate-limiting) below. |
 
 ### Routes
 
@@ -691,6 +694,48 @@ Here are all the properties you can set for API routes:
 | `path` | String | **(Required)** The destination Node.js script path to activate for API calls. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
+| `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route.  See below. |
+| `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route.  See below. |
+
+To apply rate limiting to your route, use the `max_requests_per_sec` and/or `max_concurrent_requests` properties.  Example:
+
+```js
+{
+	"type": "script",
+	"uri_match": "^/testapp/api",
+	"path": "api.js",
+	"max_requests_per_sec": 1000,
+	"max_concurrent_requests": 32
+}
+```
+
+If you want to apply rate limiting to a specific URI pattern inside the same script route, you can simply duplicate the route, and specify different URI patterns for each, but all targeting the same `path` (script).  Make sure you specify the most specific URI patterns first, as the routes are matched from top to bottom:
+
+```js
+"routes": [
+	{
+		"type": "script",
+		"uri_match": "^/testapp/api/heavy",
+		"path": "api.js",
+		"max_requests_per_sec": 100,
+		"max_concurrent_requests": 16
+	},
+	{
+		"type": "script",
+		"uri_match": "^/testapp/api/medium",
+		"path": "api.js",
+		"max_requests_per_sec": 200,
+		"max_concurrent_requests": 32
+	},
+	{
+		"type": "script",
+		"uri_match": "^/testapp/api",
+		"path": "api.js"
+	}
+]
+```
+
+The above example describes three routes, all pointing to the same script (`api.js`).  One for a "heavy" API (`^/testapp/api/heavy`) which presumably is expensive and thus has heavy rate limiting (max 100 req/sec and 16 concurrent req), one for a "medium" API (`^/testapp/api/medium`) which is less expensive and therefore has higher limits (max 200 req/sec and 32 concurrent req), and finally a default API route (`^/testapp/api`) which acts as a "catch-all" and doesn't apply any rate limiting.
 
 #### Advanced Static Hosting
 
@@ -713,6 +758,8 @@ Here are all the properties you can set for static hosting routes:
 | `path` | String | **(Required)** The destination directory filesystem path, housing the files to be statically served. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
+| `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
+| `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
 
 #### Advanced Redirects
 
@@ -737,6 +784,8 @@ Here are all the properties you can set for redirect routes:
 | `status` | String | Use this to customize the HTTP response code and status line.  It defaults to `302 Found`. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
+| `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
+| `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
 
 #### Advanced Proxies
 
@@ -772,6 +821,8 @@ Here are all the properties you can set for proxy routes:
 | `scrub_response_headers` | String | Scrub (remove) special headers from the client response.  See below for details. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
+| `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
+| `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
 
 The `scrub_request_headers` and `scrub_response_headers` properties scrub (i.e. discard and do not forward) special headers from the downstream request and client response, respectively.  Both properties are formatted as regular expressions wrapped in strings, and they are matched case-insensitively.  Here are the default values:
 
@@ -858,6 +909,26 @@ Alternatively, if your application requires a custom set of IP address ranges to
 ```
 
 Both IPv4 and IPv4 addresses and CIDR ranges are supported.  The example above includes all the [IPv4](https://en.wikipedia.org/wiki/Private_network#Private_IPv4_addresses) and [IPv6](https://en.wikipedia.org/wiki/Private_network#Private_IPv6_addresses) private address ranges, the [localhost loopback](https://en.wikipedia.org/wiki/Localhost#Loopback) addresses (both IPv4 and IPv6 versions), and the [link-local addresses](https://en.wikipedia.org/wiki/Link-local_address) (both IPv4 and IPv6 versions).
+
+### Rate Limiting
+
+If your application requires rate limiting, PoolNoodle offers a variety of ways to achieve this.  First, you can define a `max_requests_per_second` property in your app's config file:
+
+```js
+"max_requests_per_second": 100
+```
+
+If number of incoming requests to the application exceed the specified rate in the span of a second, further requests will be rejected with a `HTTP 429 Too Many Requests` response.  This will continue until the next second rollover, when the request counter is reset.  As soon as the rate drops back under the maximum, requests to the application will be allowed to route normally.
+
+You can also define a `max_concurrent_requests` property, either separately or in conjunction with max requests:
+
+```js
+"max_concurrent_requests": 32
+```
+
+If the application is serving more than the specified number of requests simultaneously (concurrently), further requests will be rejected with a `HTTP 429 Too Many Requests` response.  This will continue until the next second rollover, when the request counter is reset.  As soon as the concurrent request count drops back under the maximum, requests to the application will be allowed to route normally.
+
+You can also apply rate limiting at the route level.  See [Advanced Routing](#advanced-routing) for details.
 
 ## Plugins
 

@@ -179,6 +179,23 @@
 						];
 					});
 					
+					// table of routes
+					var sorted_routes = Object.values(json.routes);
+					var cols = ['Route ID', 'Req Rate', 'Avg Req Time', 'Total Reqs', 'Active Reqs', 'Bytes In', 'Bytes Out', 'Last Req'];
+					html += '<div class="subtitle">Routes</div>';
+					html += getBasicTable(sorted_routes, cols, 'route', function(row) {
+						return [
+							row.id,
+							commify( row.req_sec || 0 ) + ' / sec',
+							short_float( (row.total || 0) / (row.count || 1) ) + ' ms',
+							commify( row.count ),
+							commify( row.active || 0 ),
+							get_text_from_bytes( row.bytes_in || 0 ),
+							get_text_from_bytes( row.bytes_out || 0 ),
+							row.last ? (get_text_from_seconds(now - row.last, true, true) + ' ago') : 'n/a'
+						];
+					});
+					
 					// table of plugins
 					var sorted_plugins = Object.values(json.plugins).sort( function(a, b) { return a.id.localeCompare(b.id); } );
 					cols = ['Plugin ID', 'Req Rate', 'Avg Req Time', 'Total Reqs', 'Active Reqs', 'Bytes In', 'Bytes Out', 'Last Req'];
