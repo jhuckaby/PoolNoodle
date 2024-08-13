@@ -697,6 +697,7 @@ Here are all the properties you can set for API routes:
 | `type` | String | **(Required)** This specifies the route type.  Set this to `script` for API routes. |
 | `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
 | `path` | String | **(Required)** The destination Node.js script path to activate for API calls. |
+| `label` | String | Optionally add a label to the route ID (for logging and the status UI). |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route.  See below. |
@@ -724,6 +725,7 @@ If you want to apply rate limiting to a specific URI pattern inside the same scr
 		"type": "script",
 		"uri_match": "^/testapp/api/heavy",
 		"path": "api.js",
+		"label": "heavy",
 		"max_requests_per_sec": 100,
 		"max_concurrent_requests": 16
 	},
@@ -731,6 +733,7 @@ If you want to apply rate limiting to a specific URI pattern inside the same scr
 		"type": "script",
 		"uri_match": "^/testapp/api/medium",
 		"path": "api.js",
+		"label": "medium",
 		"max_requests_per_sec": 200,
 		"max_concurrent_requests": 32
 	},
@@ -743,6 +746,8 @@ If you want to apply rate limiting to a specific URI pattern inside the same scr
 ```
 
 The above example describes three routes, all pointing to the same script (`api.js`).  One for a "heavy" API (`^/testapp/api/heavy`) which presumably is expensive and thus has heavy rate limiting (max 100 req/sec and 16 concurrent req), one for a "medium" API (`^/testapp/api/medium`) which is less expensive and therefore has higher limits (max 200 req/sec and 32 concurrent req), and finally a default API route (`^/testapp/api`) which acts as a "catch-all" and doesn't apply any rate limiting.
+
+Also note that the heavy and medium routes above have a `label` property.  This is used to visually differentiate routes which target the same script (in this case `api.js`).  By including labels, you can easily identify your routes in the status UI, and in the PoolNoodle logs.  Labels are optional but recommended when you multiplex routes in this way.
 
 #### Advanced Static Hosting
 

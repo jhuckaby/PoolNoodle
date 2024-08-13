@@ -1,6 +1,6 @@
 {
 	"name": "poolnoodle",
-	"version": "1.1.27",
+	"version": "1.1.28",
 	"description": "A simple HTTP web server with managed child worker pools.",
 	"author": "Joseph Huckaby <jhuckaby@gmail.com>",
 	"homepage": "https://github.com/jhuckaby/PoolNoodle",
