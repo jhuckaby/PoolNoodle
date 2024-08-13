@@ -976,6 +976,8 @@ In this example the client has 24 concurrent requests available (meaning 8 are c
 
 You can also configure rate limit and thread headers at the route level.  See [Advanced Routing](#advanced-routing) for details.
 
+Note that all `HTTP 429` error responses will include a standard `RetryAfter: 1` header, indicating that the client can retry their failed request after 1 second.
+
 #### Multi-Server Rate Limiting
 
 If you are running PoolNoodle behind a load balancer with an even distribution of requests across servers (i.e. round-robin), you can set the global `rate_limit_multiplier` configuration property to the total number of servers you have.  This will artificially multiply all rate limit calculations, to adjust behavior for a multi-server environment.  Example:
