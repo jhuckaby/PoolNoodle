@@ -51,6 +51,8 @@
 		+ [Custom Pools](#custom-pools)
 		+ [Access Control Lists](#access-control-lists)
 		+ [Rate Limiting](#rate-limiting)
+			- [Rate Limit Headers](#rate-limit-headers)
+			- [Multi-Server Rate Limiting](#multi-server-rate-limiting)
 	* [Plugins](#plugins)
 		+ [Worker Plugins](#worker-plugins)
 	* [Command-Line Usage](#command-line-usage)
@@ -196,6 +198,7 @@ The top-level properties are all used by the [pixl-server](https://github.com/jh
 | `debug_level` | Integer | Debug logging level, larger numbers are more verbose, 1 is quietest, 10 is loudest. |
 | `worker_debug_level` | Integer | Separate debug logging level for the worker processes specifically. |
 | `check_config_freq_ms` | Integer | Frequency at which to poll the main configuration file for changes, in milliseconds. |
+| `rate_limit_multiplier` | Integer | Multiplier for rate limit calculations.  See [Rate Limiting](#rate-limiting) below. |
 
 ### WebServer Configuration
 
@@ -346,6 +349,8 @@ Here are brief descriptions of the properties in the file.  More details are in 
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this app (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this app.  See [Rate Limiting](#rate-limiting) below. |
 | `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this app.  See [Rate Limiting](#rate-limiting) below. |
+| `rate_limit_headers` | Boolean | Optionally include `RateLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
+| `thread_limit_headers` | Boolean | Optionally include `ThreadLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
 
 ### Routes
 
@@ -696,6 +701,8 @@ Here are all the properties you can set for API routes:
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route.  See below. |
 | `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route.  See below. |
+| `rate_limit_headers` | Boolean | Optionally include `RateLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
+| `thread_limit_headers` | Boolean | Optionally include `ThreadLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
 
 To apply rate limiting to your route, use the `max_requests_per_sec` and/or `max_concurrent_requests` properties.  Example:
 
@@ -760,6 +767,8 @@ Here are all the properties you can set for static hosting routes:
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
 | `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
+| `rate_limit_headers` | Boolean | Optionally include `RateLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
+| `thread_limit_headers` | Boolean | Optionally include `ThreadLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
 
 #### Advanced Redirects
 
@@ -786,6 +795,8 @@ Here are all the properties you can set for redirect routes:
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
 | `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
+| `rate_limit_headers` | Boolean | Optionally include `RateLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
+| `thread_limit_headers` | Boolean | Optionally include `ThreadLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
 
 #### Advanced Proxies
 
@@ -823,6 +834,8 @@ Here are all the properties you can set for proxy routes:
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
 | `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
+| `rate_limit_headers` | Boolean | Optionally include `RateLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
+| `thread_limit_headers` | Boolean | Optionally include `ThreadLimit` header with every response.  See [Rate Limit Headers](#rate-limit-headers) below. |
 
 The `scrub_request_headers` and `scrub_response_headers` properties scrub (i.e. discard and do not forward) special headers from the downstream request and client response, respectively.  Both properties are formatted as regular expressions wrapped in strings, and they are matched case-insensitively.  Here are the default values:
 
@@ -912,10 +925,10 @@ Both IPv4 and IPv4 addresses and CIDR ranges are supported.  The example above i
 
 ### Rate Limiting
 
-If your application requires rate limiting, PoolNoodle offers a variety of ways to achieve this.  First, you can define a `max_requests_per_second` property in your app's config file:
+If your application requires rate limiting, PoolNoodle offers a variety of ways to achieve this.  First, you can define a `max_requests_per_sec` property in your app's config file:
 
 ```js
-"max_requests_per_second": 100
+"max_requests_per_sec": 100
 ```
 
 If number of incoming requests to the application exceed the specified rate in the span of a second, further requests will be rejected with a `HTTP 429 Too Many Requests` response.  This will continue until the next second rollover, when the request counter is reset.  As soon as the rate drops back under the maximum, requests to the application will be allowed to route normally.
@@ -929,6 +942,53 @@ You can also define a `max_concurrent_requests` property, either separately or i
 If the application is serving more than the specified number of requests simultaneously (concurrently), further requests will be rejected with a `HTTP 429 Too Many Requests` response.  This will continue until the next second rollover, when the request counter is reset.  As soon as the concurrent request count drops back under the maximum, requests to the application will be allowed to route normally.
 
 You can also apply rate limiting at the route level.  See [Advanced Routing](#advanced-routing) for details.
+
+#### Rate Limit Headers
+
+PoolNoodle can optionally include special HTTP response headers with rate-limited APIs, which inform your clients about your rate limiting policy, the maximum limit, the remaining requests, and the window size.  To enable this for apps or routes that enforce a maximum requests per second, set the `rate_limit_headers` property to `true`:
+
+```js
+"rate_limit_headers": true
+```
+
+This will include both `RateLimit` and a `RateLimit-Policy` HTTP response headers with every rate-limited request.  The format is in accordance with the [seventh draft](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-07) of the IETF rate limit header specification.  Example headers:
+
+```
+RateLmit: limit=100, remaining=50, reset=1
+RateLimit-Policy: 100;w=1
+```
+
+In this example the client has 50 requests remaining in the current second, with a maximum of 100 allowed.  The reset window is always 1 second in duration.
+
+You can also enable a custom response header for concurrency-limited APIs (those that utilize `max_concurrent_requests`).  This header sends back information to the client about the current limit and the number of remaining concurrent requests available.  To enable this header set the `thread_limit_headers` property to true:
+
+```js
+"thread_limit_headers": true
+```
+
+This will include a `ThreadLimit` HTTP response header with every concurrency-limited request.  The format is custom, and does not (yet) conform to any draft or standard.  However, it closely resembles the `RateLimit` header format, sans time window.  Example header:
+
+```
+ThreadLimit: limit=32, remaining=24
+```
+
+In this example the client has 24 concurrent requests available (meaning 8 are currently in use), with a maximum of 32 allowed.  There is no reset window for these types of limits.  They are simply measured against the current number of active requests "in flight".
+
+You can also configure rate limit and thread headers at the route level.  See [Advanced Routing](#advanced-routing) for details.
+
+#### Multi-Server Rate Limiting
+
+If you are running PoolNoodle behind a load balancer with an even distribution of requests across servers (i.e. round-robin), you can set the global `rate_limit_multiplier` configuration property to the total number of servers you have.  This will artificially multiply all rate limit calculations, to adjust behavior for a multi-server environment.  Example:
+
+```js
+"rate_limit_multiplier": 2
+```
+
+Note that this is a *global* configuration property, which needs to be set in the top-level PoolNoodle `/opt/poolnoodle/conf/config.json` file.  It cannot be set at the application or route levels.
+
+So for example, if you are running 2 servers behind a round-robin load balancer, set the `rate_limit_multiplier` property to `2` as shown above.  This will multiply all rate limit calculations by 2 for the purposes of comparing against your limits, with the goal of more accurately tracking the total rate across your servers.  Meaning, you can set your `max_requests_per_sec` and/or `max_concurrent_requests` app/route properties to the **total** limits you want (i.e. across all your servers combined).  PoolNoodle will internally adjust its calculations so each server compensates individually.
+
+The `RateLimit` and `ThreadLimit` response headers will also adjust their values with respect to the `rate_limit_multiplier`, so the client will see the total (multiplied) counts reflected in the headers, specifically in the `remaining` clauses.
 
 ## Plugins
 
