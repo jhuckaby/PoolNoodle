@@ -769,6 +769,7 @@ Here are all the properties you can set for static hosting routes:
 | `uri_match` | String | **(Required)** A regular expression pattern to match on the incoming URI path. |
 | `path` | String | **(Required)** The destination directory filesystem path, housing the files to be statically served. |
 | `acl` | Complex | Customize ACL for this route only.  Set to Boolean `true` or `false` (to override the app's default), or set it to an array of custom IP ranges.  See [Access Control Lists](#access-control-lists) for more. |
+| `ttl` | Complex | Customize the `Cache-Control` response header for this route only.  If this is a number, it will be converted to `public, max-age=` followed by the value.  If set to a string the value is passed verbatim. |
 | `force_https` | Boolean | Optionally force all incoming requests to be HTTPS for this route (via HTTP 301 redirect). |
 | `max_requests_per_sec` | Number | Optionally restrict the number of incoming requests per second for this route. |
 | `max_concurrent_requests` | Number | Optionally restrict the number of concurrent requests for this route. |
