@@ -109,7 +109,7 @@ do
 			echo "$ARG: $STATUS"
 			continue
 		fi
-		if kill -HUP $PID ; then
+		if kill -USR2 $PID ; then
 			echo "$0 $ARG: $NAME is reloading"
 		else
 			echo "$0 $ARG: $NAME could not be reloaded"
