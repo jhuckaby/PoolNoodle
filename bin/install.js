@@ -5,7 +5,7 @@
 // To install, issue this command as root:
 // curl -s https://raw.githubusercontent.com/jhuckaby/PoolNoodle/master/bin/install.js | node
 
-var path = require('path');
+var Path = require('path');
 var fs = require('fs');
 var util = require('util');
 var os = require('os');
@@ -182,8 +182,14 @@ cp.exec('curl -s ' + gh_releases_url, function (err, stdout, stderr) {
 				logonly( stdout.toString() + stderr.toString() );
 			}
 			
-			// Set permissions on bin scripts
-			fs.chmodSync( "bin/control.sh", "755" );
+			try {
+				// Set permissions on bin scripts
+				fs.chmodSync( "bin/control.sh", "755" );
+				
+				// Create global symlink for our control script
+				fs.symlinkSync( base_dir + "/bin/control.sh", "/usr/bin/noodle" );
+			}
+			catch (e) {;}
 			
 			var finish = function() {
 				if (is_preinstalled) {
