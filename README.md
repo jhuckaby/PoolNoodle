@@ -59,6 +59,7 @@
 		+ [Debugging](#debugging)
 		+ [Server Reboot](#server-reboot)
 		+ [Upgrading](#upgrading)
+		+ [App Installer](#app-installer)
 	* [Status Page](#status-page)
 		+ [Active Workers](#active-workers)
 		+ [Open Sockets](#open-sockets)
@@ -1151,12 +1152,15 @@ PoolNoodle comes with a simple command-line control script which is located here
 /opt/poolnoodle/bin/control.sh
 ```
 
-It accepts a single command-line argument to start, stop, and a few other things.  Examples:
+However, it is symlinked to `/usr/bin/noodle` upon install, for convenience.  The rest of this document will use the `noodle` symlink.
+
+The control script accepts a single argument to start, stop, and a few other things.  Examples:
 
 ```
-/opt/poolnoodle/bin/control.sh start
-/opt/poolnoodle/bin/control.sh stop
-/opt/poolnoodle/bin/control.sh restart
+noodle start
+noodle stop
+noodle restart
+noodle reload
 ```
 
 Here is the full command list:
@@ -1167,7 +1171,7 @@ Here is the full command list:
 | `start` | Start PoolNoodle as a background service. |
 | `stop` | Stop PoolNoodle and wait until it actually exits. |
 | `restart` | Calls stop, then start (hard restart). |
-| `reload` | Requests a reload of all apps (rolling child restart). |
+| `reload` | Requests a hot reload of all apps (rolling child restart). |
 | `status` | Checks whether PoolNoodle is currently running. |
 | `debug` | Start the service in debug mode (see [Debugging](#debugging) below). |
 | `config` | Edit the main config file in your editor of choice (via `EDITOR` environment variable). |
@@ -1175,6 +1179,7 @@ Here is the full command list:
 | `boot` | Install PoolNoodle as a startup service (see [Server Reboot](#server-reboot) below). |
 | `unboot` | Remove PoolNoodle from the startup services. |
 | `upgrade` | Upgrades PoolNoodle to the latest stable release (or specify version). |
+| `install` | Install PoolNoodle apps.  See [App Installer](#app-installer) for details. |
 
 ### Debugging
 
@@ -1217,13 +1222,13 @@ Feel free to edit these to taste.  But if you do, it is highly recommended you c
 If you want to have the PoolNoodle daemon start up automatically when your server reboots, use you can use the special `boot` command, which will register it with the operating system's startup service (i.e. [init.d](https://bash.cyberciti.biz/guide//etc/init.d) on Linux, [LaunchAgent](https://developer.apple.com/library/content/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html) on macOS, etc.).  You only need to type this once:
 
 ```
-sudo /opt/poolnoodle/bin/control.sh boot
+sudo noodle boot
 ```
 
 To unregister and remove PoolNoodle from the server startup services, type this:
 
 ```
-sudo /opt/poolnoodle/bin/control.sh unboot
+sudo noodle unboot
 ```
 
 See the [pixl-boot](https://github.com/jhuckaby/pixl-boot) module for more details on how this works.
@@ -1233,7 +1238,7 @@ See the [pixl-boot](https://github.com/jhuckaby/pixl-boot) module for more detai
 To upgrade PoolNoodle, you can use the built-in `upgrade` command:
 
 ```
-/opt/poolnoodle/bin/control.sh upgrade
+noodle upgrade
 ```
 
 This will upgrade the app and all dependencies to the latest stable release, if a new one is available.  It will not affect your configuration settings.  Those will be preserved and imported to the new version.
@@ -1241,14 +1246,77 @@ This will upgrade the app and all dependencies to the latest stable release, if 
 Alternately, you can specify the exact version you want to upgrade (or downgrade) to:
 
 ```
-/opt/poolnoodle/bin/control.sh upgrade 1.0.4
+noodle upgrade 1.0.4
 ```
 
 If you upgrade to the `HEAD` version, this will grab the very latest from GitHub.  Note that this is primarily for developers or beta-testers, and is likely going to contain bugs.  Use at your own risk:
 
 ```
-/opt/poolnoodle/bin/control.sh upgrade HEAD
+noodle upgrade HEAD
 ```
+
+### App Installer
+
+PoolNoodle comes with a built-in CLI application installer system.  Here is how it works.  First, create your app and publish it to GitHub, NPM, or any other service supported by the NPM package name resolver.  Your app's top-level `package.json` file should also contain the PoolNoodle-specific `routes`, `static`, `redirects` and/or `proxies` properties.  Then, issue this command:
+
+```sh
+noodle install YOUR-APP@VERSION
+```
+
+For e.g. if your app is hosted on NPM, simply specify the package name and version:
+
+```sh
+noodle install my-noodle-app@1.0.0
+```
+
+Scoped NPM packages are also supported:
+
+```sh
+noodle install @myorg/my-noodle-app@1.0.0
+```
+
+Or, if your package is hosted on GitHub alone (and not published to NPM) use this syntax:
+
+```sh
+noodle install github:jhuckaby/sample-noodle#v1.0.5
+```
+
+Note that the `#v1.0.5` suffix is interpreted as a git "ref" (which can be a branch name, a tag name, or a commit hash).
+
+GitLab and BitBucket are also supported using a similar syntax:
+
+```sh
+noodle install gitlab:user/repo#v1.0.0
+noodle install bitbucket:user/repo#v1.0.0
+```
+
+The PoolNoodle App Installer will download the specified version (or short tag) of your app, and install it along with all of its dependencies.  It will then be activated in the currently running PoolNoodle instance, along with a zero-downtime hot reload.  The app installer system handles the following automatically:
+
+- Downloading and caching version-tagged apps.
+	- Each version has a unique hashed directory.
+- Setting up the symlinks necessary to activate the app in PoolNoodle.
+- Automatically triggers a zero-downtime hot reload.
+- Instant rollback to previously installed versions.
+
+Once downloaded, your app will "live" in a location similar to this (different hash of course):
+
+```
+/opt/poolnoodle/apps/versions/cf2473b50c17cf47/node_modules/sample-noodle
+```
+
+But that directory will be symlinked to a more deterministic (and non-version-tagged) location for convenience:
+
+```
+/opt/poolnoodle/apps/sample-noodle
+```
+
+Also, your `package.json` file (which doubles as your app's PoolNoodle config file) will be symlinked into PoolNoodle's app config directory like this:
+
+```
+/opt/poolnoodle/conf/apps/sample-noodle.json
+```
+
+This strategy allows for multiple versions of your app to be "installed" on a server at the same time, but only one is "active" in PoolNoodle.  If you issue a `noodle install ...` command for a previously installed version, it will be detected on disk and immediately activated (no download necessary).
 
 ## Status Page
 

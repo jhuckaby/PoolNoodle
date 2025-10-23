@@ -144,21 +144,26 @@ do
 		node $HOMEDIR/bin/install.js $2 || exit 1
 		exit
 	;;
+	install)
+		node $HOMEDIR/bin/app.js "$@" || exit 1
+		exit
+	;;
 	*)
-	echo "usage: $0 (start|stop|restart|status|help)"
+	echo "usage: $0 (start|stop|restart|reload|status|help)"
 	cat <<EOF
 
-start	  - Starts $NAME as a daemon.
-stop	   - Stops $NAME and wait until it actually exits.
-restart	- Calls stop, then start (hard restart).
-debug	  - Starts $NAME in debug move (no fork, log echo).
-config	 - Spawns $EDITOR for editing $NAME config file.
+start      - Starts $NAME as a daemon.
+stop       - Stops $NAME and wait until it actually exits.
+restart    - Calls stop, then start (hard restart).
+debug      - Starts $NAME in debug move (no fork, log echo).
+config     - Spawns $EDITOR for editing $NAME config file.
 showconfig - Shows the location of the $NAME config file.
-boot	   - Install $NAME as a startup service.
-unboot	 - Remove $NAME from the startup services.
-upgrade	- Upgrades $NAME to the latest stable (or specify version).
-status	 - Checks whether $NAME is currently running.
-help	   - Displays this screen.
+boot       - Install $NAME as a startup service.
+unboot     - Remove $NAME from the startup services.
+upgrade    - Upgrades $NAME to the latest stable (or specify version).
+install    - Installs a specific 3rd party PoolNoodle app.
+status     - Checks whether $NAME is currently running.
+help       - Displays this screen.
 
 EOF
 	ERROR=2
