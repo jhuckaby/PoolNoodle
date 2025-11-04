@@ -26,8 +26,23 @@ function die(msg) {
 const npm_bin = Tools.findBinSync('npm');
 if (!npm_bin) die("Could not find NPM binary.");
 
-const app_str = process.argv[3];
+var app_str = process.argv[3];
 if (!app_str) die(usage);
+
+// Special GitHub shortcut for #latest tag
+if (app_str.match(/^github:([\w\-\.\/]+)\#latest$/)) {
+	var gh_org_repo = RegExp.$1;
+	var curl_bin = Tools.findBinSync('curl');
+	if (!curl_bin) die("Could not find curl binary.");
+	var gh_cmd = `${curl_bin} -s https://api.github.com/repos/${gh_org_repo}/tags | grep '"name":' | head -1 | cut -d'"' -f4`;
+	try {
+		var tag_name = cp.execSync( gh_cmd, { encoding: 'utf8' } ).trim();
+		app_str = app_str.replace( /\#latest$/, '#' + tag_name );
+	}
+	catch (err) {
+		die("Failed to query git for latest tag: " + err);
+	}
+}
 
 const app_name = app_str.replace(/^\@[\w\-]+\//, '').replace(/[\@\#].+$/, '').replace(/^\w+\:[\w\-\.]+\//, '');
 const app_hash = Tools.digestHex( app_str, 'sha256', 16 );
