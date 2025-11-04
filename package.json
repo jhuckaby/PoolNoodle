@@ -1,6 +1,6 @@
 {
 	"name": "poolnoodle",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"private": true,
 	"description": "A simple HTTP web server with managed child worker pools.",
 	"author": "Joseph Huckaby <jhuckaby@gmail.com>",
