@@ -53,8 +53,33 @@ const app = {
 	
 	find() {
 		// find hashed location of specified app+version
-		console.log( app_hash_dir );
-		// console.log( app_hash_dir + `/node_modules/${app_name}` );
+		console.log("");
+		
+		if (!fs.existsSync(app_hash_dir)) {
+			console.error( `NOT INSTALLED: ${app_str}` );
+			console.error( `Path Not Found: ${app_hash_dir}` );
+			process.exit(1);
+		}
+		
+		console.log( app_str + " is installed:\n" + app_hash_dir + `/node_modules/${app_name}` );
+		
+		// is it active too?
+		if (!fs.existsSync(app_dir)) {
+			console.log( `${app_name} is not active at all (any version).` );
+			process.exit(0);
+		}
+		
+		var target = Path.resolve( fs.readlinkSync(app_dir) );
+		if (target.includes(app_hash_dir)) {
+			console.log( `Version is currently active.` );
+		}
+		else {
+			console.log( `Version is NOT active.` );
+			var pkg = JSON.parse( fs.readFileSync(target + `/package.json`, 'utf8') );
+			console.log( `(Current active version is: ${pkg.version})` );
+		}
+		
+		console.log("");
 	},
 	
 	install() {
@@ -99,6 +124,15 @@ const app = {
 	activate() {
 		// activate app
 		console.log("Activating app: " + app_str);
+		
+		if (fs.existsSync(app_dir)) {
+			// some version is already active, check against one user is trying to activate
+			var target = Path.resolve( fs.readlinkSync(app_dir) );
+			if (target.includes(app_hash_dir)) {
+				console.log( `Version is already active.\nNothing to do.` );
+				process.exit(0);
+			}
+		}
 		
 		var pkg_dir = app_hash_dir + `/node_modules/${app_name}`;
 		if (!fs.existsSync(pkg_dir)) die("App install dir was not found: " + pkg_dir);
