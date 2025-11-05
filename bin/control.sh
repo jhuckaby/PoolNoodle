@@ -148,6 +148,14 @@ do
 		node $HOMEDIR/bin/app.js "$@" || exit 1
 		exit
 	;;
+	find)
+		node $HOMEDIR/bin/app.js "$@" || exit 1
+		exit
+	;;
+	prune)
+		node $HOMEDIR/bin/prune.js "$@" || exit 1
+		exit
+	;;
 	*)
 	echo "usage: $0 (start|stop|restart|reload|status|help)"
 	cat <<EOF
