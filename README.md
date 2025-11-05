@@ -1318,6 +1318,22 @@ Also, your `package.json` file (which doubles as your app's PoolNoodle config fi
 
 This strategy allows for multiple versions of your app to be "installed" on a server at the same time, but only one is "active" in PoolNoodle.  If you issue a `noodle install ...` command for a previously installed version, it will be detected on disk and immediately activated (no download necessary).
 
+To get information about a particular app version, use the `find` command:
+
+```sh
+noodle find github:jhuckaby/sample-noodle#v1.0.5
+```
+
+This will tell you where the version is located on disk, and if it is the currently active version or not.
+
+To save on disk space you can "prune" (delete) old versions still sitting around.  Use the following command to prune all:
+
+```sh
+noodle prune
+```
+
+This will safely ignore the active app versions, and only delete the non-active ones.
+
 ## Status Page
 
 PoolNoodle comes with a built-in status page which you can access in your browser by hitting the `/status/` URI.  Note that it requires the user be inside the default ACL (see [http_default_acl](https://github.com/jhuckaby/pixl-server-web#http_default_acl)).  Here is a screenshot:
